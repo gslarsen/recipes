@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Output
+output/
+
+# Sensitive files - DO NOT COMMIT
+cookies.json
+*cookies*.json
+*.cookies
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+

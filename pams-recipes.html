@@ -1367,11 +1367,19 @@ function applyCurrentSort() {
             break;
         case 'newest':
         default:
-            // Keep original order (order from JSON file)
+            // Sort by date_added (newest first), then by original order for older recipes
             const originalOrder = new Map(allRecipes.map((r, i) => [r.url, i]));
-            filteredRecipes.sort((a, b) =>
-                (originalOrder.get(a.url) || 0) - (originalOrder.get(b.url) || 0)
-            );
+            filteredRecipes.sort((a, b) => {
+                // If both have date_added, sort by date descending (newest first)
+                if (a.date_added && b.date_added) {
+                    return b.date_added.localeCompare(a.date_added);
+                }
+                // Recipes with date_added come before those without
+                if (a.date_added && !b.date_added) return -1;
+                if (!a.date_added && b.date_added) return 1;
+                // For recipes without date_added, keep original JSON order
+                return (originalOrder.get(a.url) || 0) - (originalOrder.get(b.url) || 0);
+            });
             break;
     }
 }

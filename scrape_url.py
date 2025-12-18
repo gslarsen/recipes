@@ -14,6 +14,7 @@ import json
 import os
 import re
 from pathlib import Path
+from datetime import datetime
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
@@ -141,6 +142,8 @@ def main():
             for recipe in recipes:
                 recipe_dict = recipe.__dict__ if hasattr(recipe, '__dict__') else recipe
                 if recipe_dict.get("url") not in existing_urls:
+                    # Add date_added timestamp for sorting by "Newest"
+                    recipe_dict["date_added"] = datetime.now().isoformat()
                     existing.append(recipe_dict)
                     new_count += 1
 

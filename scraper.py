@@ -121,11 +121,22 @@ class FoodNetworkScraper:
         """
         self.session = requests.Session()
         self.delay = delay
+        # More complete browser headers to avoid bot detection
         self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
             "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Sec-Ch-Ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"macOS"',
+            "Cache-Control": "max-age=0",
         })
 
     def set_cookies(self, cookies: dict):
@@ -150,13 +161,30 @@ class FoodNetworkScraper:
             cookies = json.load(f)
         self.set_cookies(cookies)
 
-    def _get_page(self, url: str) -> Optional[BeautifulSoup]:
+    def _get_page(self, url: str, raise_on_error: bool = True) -> Optional[BeautifulSoup]:
         """Fetch a page and return parsed BeautifulSoup object."""
         try:
             time.sleep(self.delay)
+            # Set referer to look like normal browsing
+            self.session.headers["Referer"] = self.BASE_URL + "/"
             response = self.session.get(url, timeout=30)
-            response.raise_for_status()
-            return BeautifulSoup(response.text, 'lxml')
+
+            if response.status_code == 403:
+                console.print(f"[yellow]Access denied (403) for {url}[/yellow]")
+                console.print("[dim]This may indicate bot detection or missing authentication.[/dim]")
+                return None
+            elif response.status_code == 401:
+                console.print(f"[yellow]Not authenticated (401) for {url}[/yellow]")
+                console.print("[dim]Your cookies may have expired. Try re-exporting them.[/dim]")
+                return None
+
+            if raise_on_error:
+                response.raise_for_status()
+            elif not response.ok:
+                console.print(f"[dim]Got status {response.status_code} for {url}[/dim]")
+                return None
+
+            return BeautifulSoup(response.text, "lxml")
         except requests.RequestException as e:
             console.print(f"[red]Error fetching {url}: {e}[/red]")
             return None
@@ -394,40 +422,52 @@ class FoodNetworkScraper:
         Returns:
             List of recipe URLs
         """
-        # Food Network saved recipes are typically at this URL
-        saved_url = f"{self.BASE_URL}/profiles/saved-recipes"
+        # Food Network has multiple possible URLs for saved recipes
+        saved_urls = [
+            f"{self.BASE_URL}/saves",
+            f"{self.BASE_URL}/profiles/saved-recipes",
+            f"{self.BASE_URL}/my/saved-recipes",
+        ]
 
         console.print("[cyan]Fetching saved recipes...[/cyan]")
 
         urls = []
-        page = 1
 
-        while True:
-            page_url = f"{saved_url}?page={page}" if page > 1 else saved_url
-            soup = self._get_page(page_url)
+        for saved_url in saved_urls:
+            console.print(f"[dim]Trying: {saved_url}[/dim]")
+            page = 1
 
-            if not soup:
-                break
+            while True:
+                page_url = f"{saved_url}?page={page}" if page > 1 else saved_url
+                soup = self._get_page(page_url, raise_on_error=False)
 
-            # Look for recipe links
-            found_any = False
-            for link in soup.find_all('a', href=True):
-                href = link['href']
-                if '/recipes/' in href and href not in urls:
-                    full_url = urljoin(self.BASE_URL, href)
-                    # Filter out non-recipe pages
-                    if '/recipes/' in full_url and not any(x in full_url for x in ['/photos/', '/videos/', '/packages/']):
-                        urls.append(full_url)
-                        found_any = True
+                if not soup:
+                    break
 
-            # Check for next page
-            next_link = soup.find('a', class_=re.compile(r'next|pagination', re.I))
-            if not next_link or not found_any:
-                break
+                # Look for recipe links
+                found_any = False
+                for link in soup.find_all("a", href=True):
+                    href = link["href"]
+                    if "/recipes/" in href and href not in urls:
+                        full_url = urljoin(self.BASE_URL, href)
+                        # Filter out non-recipe pages
+                        if "/recipes/" in full_url and not any(
+                            x in full_url for x in ["/photos/", "/videos/", "/packages/"]
+                        ):
+                            urls.append(full_url)
+                            found_any = True
 
-            page += 1
-            if page > 50:  # Safety limit
-                break
+                # Check for next page
+                next_link = soup.find("a", class_=re.compile(r"next|pagination", re.I))
+                if not next_link or not found_any:
+                    break
+
+                page += 1
+                if page > 50:  # Safety limit
+                    break
+
+            if urls:
+                break  # Found recipes, no need to try other URLs
 
         console.print(f"[green]Found {len(urls)} recipe URLs[/green]")
         return urls

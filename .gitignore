@@ -22,6 +22,7 @@ output/
 cookies.json
 *cookies*.json
 *.cookies
+.browser_state/
 
 # OS
 .DS_Store

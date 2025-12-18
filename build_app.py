@@ -14,6 +14,7 @@ Output:
 
 import json
 import os
+import shutil
 from pathlib import Path
 from datetime import datetime
 
@@ -24,12 +25,56 @@ CSS_PATH = SCRIPT_DIR / "web" / "styles.css"
 JS_PATH = SCRIPT_DIR / "web" / "app.js"
 OUTPUT_PATH = SCRIPT_DIR / "pams-recipes.html"
 DOCS_PATH = SCRIPT_DIR / "docs" / "index.html"  # For GitHub Pages
+IMAGES_DIR = SCRIPT_DIR / "images"
+DOCS_IMAGES_DIR = SCRIPT_DIR / "docs" / "images"
 
 
 def load_recipes():
     """Load recipes from JSON file."""
     with open(JSON_PATH, 'r', encoding='utf-8') as f:
         return json.load(f)
+
+
+def prepare_recipes_for_web(recipes):
+    """
+    Prepare recipes for the web app.
+    Uses local images when available, falls back to URLs.
+    """
+    prepared = []
+    local_images_used = 0
+    
+    for recipe in recipes:
+        r = recipe.copy()
+        
+        # Check if we have a local image
+        local_path = r.get('local_image_path')
+        if local_path and (SCRIPT_DIR / local_path).exists():
+            # For GitHub Pages, images will be in same directory
+            r['image_url'] = local_path.replace('images/', 'images/')
+            local_images_used += 1
+        # Otherwise keep the original image_url (or None)
+        
+        prepared.append(r)
+    
+    return prepared, local_images_used
+
+
+def copy_images_to_docs():
+    """Copy images to docs folder for GitHub Pages."""
+    if not IMAGES_DIR.exists():
+        return 0
+    
+    # Create docs/images directory
+    DOCS_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+    
+    # Copy all images
+    count = 0
+    for img_file in IMAGES_DIR.glob('*'):
+        if img_file.is_file():
+            shutil.copy2(img_file, DOCS_IMAGES_DIR / img_file.name)
+            count += 1
+    
+    return count
 
 
 def load_css():
@@ -187,6 +232,11 @@ def main():
     recipe_count = len(recipes)
     print(f"   Found {recipe_count} recipes")
 
+    # Prepare recipes (use local images when available)
+    print("🖼️  Preparing images...")
+    prepared_recipes, local_count = prepare_recipes_for_web(recipes)
+    print(f"   Using {local_count} local images")
+
     print("🎨 Loading styles...")
     css = load_css()
 
@@ -194,7 +244,7 @@ def main():
     js = load_js()
 
     print("📦 Bundling application...")
-    embedded_js = create_embedded_js(recipes, js)
+    embedded_js = create_embedded_js(prepared_recipes, js)
     html = build_html(css, embedded_js, recipe_count)
 
     # Write output
@@ -207,6 +257,12 @@ def main():
     print(f"💾 Writing to docs/index.html (for GitHub Pages)...")
     with open(DOCS_PATH, 'w', encoding='utf-8') as f:
         f.write(html)
+
+    # Copy images to docs folder
+    if IMAGES_DIR.exists():
+        print("🖼️  Copying images to docs/images/...")
+        img_count = copy_images_to_docs()
+        print(f"   Copied {img_count} images")
 
     # Get file size
     file_size = OUTPUT_PATH.stat().st_size

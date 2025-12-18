@@ -24,6 +24,7 @@ console = Console()
 @dataclass
 class Recipe:
     """Represents a scraped recipe."""
+
     title: str
     url: str
     author: Optional[str] = None
@@ -122,22 +123,24 @@ class FoodNetworkScraper:
         self.session = requests.Session()
         self.delay = delay
         # More complete browser headers to avoid bot detection
-        self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
-            "Sec-Ch-Ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
-            "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"macOS"',
-            "Cache-Control": "max-age=0",
-        })
+        self.session.headers.update(
+            {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+                "Sec-Ch-Ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+                "Sec-Ch-Ua-Mobile": "?0",
+                "Sec-Ch-Ua-Platform": '"macOS"',
+                "Cache-Control": "max-age=0",
+            }
+        )
 
     def set_cookies(self, cookies: dict):
         """
@@ -157,11 +160,13 @@ class FoodNetworkScraper:
         Args:
             filepath: Path to JSON file containing cookies
         """
-        with open(filepath, 'r') as f:
+        with open(filepath, "r") as f:
             cookies = json.load(f)
         self.set_cookies(cookies)
 
-    def _get_page(self, url: str, raise_on_error: bool = True) -> Optional[BeautifulSoup]:
+    def _get_page(
+        self, url: str, raise_on_error: bool = True
+    ) -> Optional[BeautifulSoup]:
         """Fetch a page and return parsed BeautifulSoup object."""
         try:
             time.sleep(self.delay)
@@ -171,11 +176,15 @@ class FoodNetworkScraper:
 
             if response.status_code == 403:
                 console.print(f"[yellow]Access denied (403) for {url}[/yellow]")
-                console.print("[dim]This may indicate bot detection or missing authentication.[/dim]")
+                console.print(
+                    "[dim]This may indicate bot detection or missing authentication.[/dim]"
+                )
                 return None
             elif response.status_code == 401:
                 console.print(f"[yellow]Not authenticated (401) for {url}[/yellow]")
-                console.print("[dim]Your cookies may have expired. Try re-exporting them.[/dim]")
+                console.print(
+                    "[dim]Your cookies may have expired. Try re-exporting them.[/dim]"
+                )
                 return None
 
             if raise_on_error:
@@ -191,20 +200,20 @@ class FoodNetworkScraper:
 
     def _extract_json_ld(self, soup: BeautifulSoup) -> Optional[dict]:
         """Extract structured recipe data from JSON-LD script tags."""
-        scripts = soup.find_all('script', type='application/ld+json')
+        scripts = soup.find_all("script", type="application/ld+json")
         for script in scripts:
             try:
                 data = json.loads(script.string)
                 # Handle both single object and array formats
                 if isinstance(data, list):
                     for item in data:
-                        if item.get('@type') == 'Recipe':
+                        if item.get("@type") == "Recipe":
                             return item
-                elif data.get('@type') == 'Recipe':
+                elif data.get("@type") == "Recipe":
                     return data
-                elif '@graph' in data:
-                    for item in data['@graph']:
-                        if item.get('@type') == 'Recipe':
+                elif "@graph" in data:
+                    for item in data["@graph"]:
+                        if item.get("@type") == "Recipe":
                             return item
             except (json.JSONDecodeError, TypeError):
                 continue
@@ -243,7 +252,7 @@ class FoodNetworkScraper:
             if not time_str:
                 return None
             # Parse PT1H30M format
-            match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?', time_str)
+            match = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?", time_str)
             if match:
                 hours, minutes = match.groups()
                 parts = []
@@ -259,23 +268,23 @@ class FoodNetworkScraper:
             if not instructions:
                 return []
             if isinstance(instructions, str):
-                return [s.strip() for s in instructions.split('\n') if s.strip()]
+                return [s.strip() for s in instructions.split("\n") if s.strip()]
             if isinstance(instructions, list):
                 result = []
                 for item in instructions:
                     if isinstance(item, str):
                         result.append(item)
                     elif isinstance(item, dict):
-                        if item.get('@type') == 'HowToStep':
-                            result.append(item.get('text', ''))
-                        elif item.get('@type') == 'HowToSection':
+                        if item.get("@type") == "HowToStep":
+                            result.append(item.get("text", ""))
+                        elif item.get("@type") == "HowToSection":
                             # Handle sections with nested steps
-                            section_name = item.get('name', '')
+                            section_name = item.get("name", "")
                             if section_name:
                                 result.append(f"**{section_name}**")
-                            for step in item.get('itemListElement', []):
+                            for step in item.get("itemListElement", []):
                                 if isinstance(step, dict):
-                                    result.append(step.get('text', ''))
+                                    result.append(step.get("text", ""))
                 return [s for s in result if s]
             return []
 
@@ -288,18 +297,18 @@ class FoodNetworkScraper:
             return []
 
         nutrition = {}
-        if 'nutrition' in data and isinstance(data['nutrition'], dict):
-            nutrition_data = data['nutrition']
+        if "nutrition" in data and isinstance(data["nutrition"], dict):
+            nutrition_data = data["nutrition"]
             nutrition_fields = [
-                ('calories', 'Calories'),
-                ('fatContent', 'Fat'),
-                ('saturatedFatContent', 'Saturated Fat'),
-                ('cholesterolContent', 'Cholesterol'),
-                ('sodiumContent', 'Sodium'),
-                ('carbohydrateContent', 'Carbohydrates'),
-                ('fiberContent', 'Fiber'),
-                ('sugarContent', 'Sugar'),
-                ('proteinContent', 'Protein'),
+                ("calories", "Calories"),
+                ("fatContent", "Fat"),
+                ("saturatedFatContent", "Saturated Fat"),
+                ("cholesterolContent", "Cholesterol"),
+                ("sodiumContent", "Sodium"),
+                ("carbohydrateContent", "Carbohydrates"),
+                ("fiberContent", "Fiber"),
+                ("sugarContent", "Sugar"),
+                ("proteinContent", "Protein"),
             ]
             for field, label in nutrition_fields:
                 if field in nutrition_data:
@@ -307,50 +316,58 @@ class FoodNetworkScraper:
 
         # Get author
         author = None
-        if 'author' in data:
-            author_data = data['author']
+        if "author" in data:
+            author_data = data["author"]
             if isinstance(author_data, str):
                 author = author_data
             elif isinstance(author_data, dict):
-                author = author_data.get('name')
+                author = author_data.get("name")
             elif isinstance(author_data, list) and author_data:
                 first_author = author_data[0]
-                author = first_author.get('name') if isinstance(first_author, dict) else str(first_author)
+                author = (
+                    first_author.get("name")
+                    if isinstance(first_author, dict)
+                    else str(first_author)
+                )
 
         # Get image URL
         image_url = None
-        if 'image' in data:
-            image_data = data['image']
+        if "image" in data:
+            image_data = data["image"]
             if isinstance(image_data, str):
                 image_url = image_data
             elif isinstance(image_data, dict):
-                image_url = image_data.get('url')
+                image_url = image_data.get("url")
             elif isinstance(image_data, list) and image_data:
                 first_image = image_data[0]
-                image_url = first_image.get('url') if isinstance(first_image, dict) else str(first_image)
+                image_url = (
+                    first_image.get("url")
+                    if isinstance(first_image, dict)
+                    else str(first_image)
+                )
 
         # Get categories
         categories = []
-        if 'recipeCategory' in data:
-            cat = data['recipeCategory']
+        if "recipeCategory" in data:
+            cat = data["recipeCategory"]
             categories = cat if isinstance(cat, list) else [cat]
-        if 'recipeCuisine' in data:
-            cuisine = data['recipeCuisine']
+        if "recipeCuisine" in data:
+            cuisine = data["recipeCuisine"]
             cuisines = cuisine if isinstance(cuisine, list) else [cuisine]
             categories.extend(cuisines)
 
         return Recipe(
-            title=data.get('name', 'Untitled Recipe'),
+            title=data.get("name", "Untitled Recipe"),
             url=url,
             author=author,
-            description=data.get('description'),
-            prep_time=get_time(data.get('prepTime')),
-            cook_time=get_time(data.get('cookTime')),
-            total_time=get_time(data.get('totalTime')),
-            servings=data.get('recipeYield'),
-            difficulty=data.get('difficulty'),
-            ingredients=get_ingredients(data.get('recipeIngredient')),
-            instructions=get_instructions(data.get('recipeInstructions')),
+            description=data.get("description"),
+            prep_time=get_time(data.get("prepTime")),
+            cook_time=get_time(data.get("cookTime")),
+            total_time=get_time(data.get("totalTime")),
+            servings=data.get("recipeYield"),
+            difficulty=data.get("difficulty"),
+            ingredients=get_ingredients(data.get("recipeIngredient")),
+            instructions=get_instructions(data.get("recipeInstructions")),
             image_url=image_url,
             categories=categories,
             nutrition=nutrition,
@@ -361,47 +378,49 @@ class FoodNetworkScraper:
 
         # Title
         title = "Untitled Recipe"
-        title_elem = soup.find('h1', class_=re.compile(r'title|headline', re.I))
+        title_elem = soup.find("h1", class_=re.compile(r"title|headline", re.I))
         if title_elem:
             title = title_elem.get_text(strip=True)
-        elif soup.find('h1'):
-            title = soup.find('h1').get_text(strip=True)
+        elif soup.find("h1"):
+            title = soup.find("h1").get_text(strip=True)
 
         # Author
         author = None
-        author_elem = soup.find(class_=re.compile(r'author|byline|chef', re.I))
+        author_elem = soup.find(class_=re.compile(r"author|byline|chef", re.I))
         if author_elem:
             author = author_elem.get_text(strip=True)
 
         # Description
         description = None
-        desc_elem = soup.find(class_=re.compile(r'description|summary|intro', re.I))
+        desc_elem = soup.find(class_=re.compile(r"description|summary|intro", re.I))
         if desc_elem:
             description = desc_elem.get_text(strip=True)
 
         # Ingredients
         ingredients = []
-        ingredient_container = soup.find(class_=re.compile(r'ingredient', re.I))
+        ingredient_container = soup.find(class_=re.compile(r"ingredient", re.I))
         if ingredient_container:
-            for item in ingredient_container.find_all(['li', 'p', 'span']):
+            for item in ingredient_container.find_all(["li", "p", "span"]):
                 text = item.get_text(strip=True)
                 if text and len(text) > 2:
                     ingredients.append(text)
 
         # Instructions
         instructions = []
-        instruction_container = soup.find(class_=re.compile(r'instruction|direction|method|step', re.I))
+        instruction_container = soup.find(
+            class_=re.compile(r"instruction|direction|method|step", re.I)
+        )
         if instruction_container:
-            for item in instruction_container.find_all(['li', 'p']):
+            for item in instruction_container.find_all(["li", "p"]):
                 text = item.get_text(strip=True)
                 if text and len(text) > 5:
                     instructions.append(text)
 
         # Image
         image_url = None
-        img = soup.find('img', class_=re.compile(r'recipe|hero|main', re.I))
+        img = soup.find("img", class_=re.compile(r"recipe|hero|main", re.I))
         if img:
-            image_url = img.get('src') or img.get('data-src')
+            image_url = img.get("src") or img.get("data-src")
 
         return Recipe(
             title=title,
@@ -452,7 +471,8 @@ class FoodNetworkScraper:
                         full_url = urljoin(self.BASE_URL, href)
                         # Filter out non-recipe pages
                         if "/recipes/" in full_url and not any(
-                            x in full_url for x in ["/photos/", "/videos/", "/packages/"]
+                            x in full_url
+                            for x in ["/photos/", "/videos/", "/packages/"]
                         ):
                             urls.append(full_url)
                             found_any = True
@@ -487,14 +507,14 @@ class FoodNetworkScraper:
             return []
 
         urls = []
-        for link in soup.find_all('a', href=True):
-            href = link['href']
-            if '/recipes/' in href:
+        for link in soup.find_all("a", href=True):
+            href = link["href"]
+            if "/recipes/" in href:
                 full_url = urljoin(self.BASE_URL, href)
                 # Ensure it's a recipe detail page (usually has recipe name in path)
                 parsed = urlparse(full_url)
-                path_parts = [p for p in parsed.path.split('/') if p]
-                if len(path_parts) >= 2 and path_parts[0] == 'recipes':
+                path_parts = [p for p in parsed.path.split("/") if p]
+                if len(path_parts) >= 2 and path_parts[0] == "recipes":
                     if full_url not in urls:
                         urls.append(full_url)
 
@@ -521,23 +541,23 @@ def save_recipes(recipes: list[Recipe], output_dir: str = "output"):
     # Save each recipe
     for recipe in recipes:
         # Create safe filename
-        safe_name = re.sub(r'[^\w\s-]', '', recipe.title)
-        safe_name = re.sub(r'[-\s]+', '-', safe_name).strip('-').lower()
+        safe_name = re.sub(r"[^\w\s-]", "", recipe.title)
+        safe_name = re.sub(r"[-\s]+", "-", safe_name).strip("-").lower()
         safe_name = safe_name[:80]  # Limit length
 
         # Save JSON
         json_path = json_dir / f"{safe_name}.json"
-        with open(json_path, 'w', encoding='utf-8') as f:
+        with open(json_path, "w", encoding="utf-8") as f:
             json.dump(asdict(recipe), f, indent=2, ensure_ascii=False)
 
         # Save Markdown
         md_path = markdown_dir / f"{safe_name}.md"
-        with open(md_path, 'w', encoding='utf-8') as f:
+        with open(md_path, "w", encoding="utf-8") as f:
             f.write(recipe.to_markdown())
 
     # Save combined JSON
     all_recipes_path = output_path / "all_recipes.json"
-    with open(all_recipes_path, 'w', encoding='utf-8') as f:
+    with open(all_recipes_path, "w", encoding="utf-8") as f:
         json.dump([asdict(r) for r in recipes], f, indent=2, ensure_ascii=False)
 
     console.print(f"[green]✓ Saved {len(recipes)} recipes to {output_dir}/[/green]")
@@ -550,4 +570,3 @@ if __name__ == "__main__":
     # Example usage
     console.print("[bold blue]Food Network Recipe Scraper[/bold blue]")
     console.print("See README.md for usage instructions")
-

@@ -52,10 +52,14 @@ def generate_markdown(recipe):
         lines.append("")
 
     info = []
-    if recipe.get("prep_time"): info.append(f"**Prep:** {recipe['prep_time']}")
-    if recipe.get("cook_time"): info.append(f"**Cook:** {recipe['cook_time']}")
-    if recipe.get("total_time"): info.append(f"**Total:** {recipe['total_time']}")
-    if recipe.get("servings"): info.append(f"**Servings:** {recipe['servings']}")
+    if recipe.get("prep_time"):
+        info.append(f"**Prep:** {recipe['prep_time']}")
+    if recipe.get("cook_time"):
+        info.append(f"**Cook:** {recipe['cook_time']}")
+    if recipe.get("total_time"):
+        info.append(f"**Total:** {recipe['total_time']}")
+    if recipe.get("servings"):
+        info.append(f"**Servings:** {recipe['servings']}")
     if info:
         lines.append(" | ".join(info))
         lines.append("")
@@ -97,16 +101,22 @@ def scrape_single_url(url: str, page) -> dict:
 
 def main():
     if len(sys.argv) < 2:
-        console.print("[yellow]Usage: python scrape_url.py <url> [url2] [url3] ...[/yellow]")
+        console.print(
+            "[yellow]Usage: python scrape_url.py <url> [url2] [url3] ...[/yellow]"
+        )
         console.print("\nExample:")
-        console.print('  python scrape_url.py "https://www.foodnetwork.com/recipes/ina-garten/..."')
+        console.print(
+            '  python scrape_url.py "https://www.foodnetwork.com/recipes/ina-garten/..."'
+        )
         sys.exit(1)
 
     urls = sys.argv[1:]
     console.print(f"[cyan]Scraping {len(urls)} recipe(s)...[/cyan]")
 
     if not STATE_FILE.exists():
-        console.print("[red]No login session found. Run 'python browser_scraper.py login' first.[/red]")
+        console.print(
+            "[red]No login session found. Run 'python browser_scraper.py login' first.[/red]"
+        )
         sys.exit(1)
 
     with sync_playwright() as p:
@@ -140,7 +150,7 @@ def main():
             existing_urls = {r.get("url") for r in existing}
             new_count = 0
             for recipe in recipes:
-                recipe_dict = recipe.__dict__ if hasattr(recipe, '__dict__') else recipe
+                recipe_dict = recipe.__dict__ if hasattr(recipe, "__dict__") else recipe
                 if recipe_dict.get("url") not in existing_urls:
                     # Add date_added timestamp for sorting by "Newest"
                     recipe_dict["date_added"] = datetime.now().isoformat()
@@ -150,19 +160,23 @@ def main():
             with open(final_file, "w") as f:
                 json.dump(existing, f, indent=2)
 
-            console.print(f"\n[green]✓ Added {new_count} new recipe(s) to all_recipes_final.json[/green]")
-            console.print(f"[green]  Total recipes in collection: {len(existing)}[/green]")
+            console.print(
+                f"\n[green]✓ Added {new_count} new recipe(s) to all_recipes_final.json[/green]"
+            )
+            console.print(
+                f"[green]  Total recipes in collection: {len(existing)}[/green]"
+            )
 
         # Also save to markdown_final
         md_final_dir = Path("output/markdown_final")
         if md_final_dir.exists():
             for recipe in recipes:
-                recipe_dict = recipe.__dict__ if hasattr(recipe, '__dict__') else recipe
+                recipe_dict = recipe.__dict__ if hasattr(recipe, "__dict__") else recipe
                 title = recipe_dict.get("title", "untitled")
                 # Slugify
                 slug = title.lower()
-                slug = re.sub(r'[^\w\s-]', '', slug)
-                slug = re.sub(r'[-\s]+', '-', slug).strip('-')
+                slug = re.sub(r"[^\w\s-]", "", slug)
+                slug = re.sub(r"[-\s]+", "-", slug).strip("-")
 
                 md_content = generate_markdown(recipe_dict)
                 with open(md_final_dir / f"{slug}.md", "w") as f:
@@ -174,4 +188,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

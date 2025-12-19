@@ -262,7 +262,7 @@ function handleSearch() {
             const authorMatch = recipe.author?.toLowerCase().includes(query);
             // const ingredientMatch = recipe.ingredients?.some(ing => ing.toLowerCase().includes(query));
             const descMatch = recipe.description?.toLowerCase().includes(query);
-
+            // include ingredientMatch if Pam wants to search by ingredient too
             return titleMatch || authorMatch || descMatch;
         });
     }

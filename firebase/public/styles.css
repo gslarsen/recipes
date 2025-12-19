@@ -781,28 +781,34 @@ body {
     flex-shrink: 0;
 }
 
+/* Delete Recipe Button Container */
+.delete-recipe-container {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--space-xl);
+}
+
 /* Delete Recipe Button */
 .delete-recipe-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    margin-top: var(--space-xl);
     padding: 8px 16px;
     background: transparent;
-    border: none;
+    border: 1px solid #dc3545;
     border-radius: 6px;
-    color: var(--text-muted);
+    color: #dc3545;
     font-family: var(--font-body);
     font-size: 0.8rem;
-    font-weight: 400;
+    font-weight: 500;
     cursor: pointer;
     transition: var(--transition-fast);
 }
 
 .delete-recipe-btn:hover {
-    background: #fef2f2;
-    color: #b91c1c;
+    background: #dc3545;
+    color: white;
 }
 
 .delete-recipe-btn:disabled {

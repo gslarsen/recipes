@@ -16,7 +16,8 @@ env/
 *.swo
 
 # Output
-output/
+output/*
+!output/all_recipes_final.json
 
 # Sensitive files - DO NOT COMMIT
 cookies.json

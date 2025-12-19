@@ -260,13 +260,10 @@ function handleSearch() {
         filteredRecipes = allRecipes.filter(recipe => {
             const titleMatch = recipe.title?.toLowerCase().includes(query);
             const authorMatch = recipe.author?.toLowerCase().includes(query);
-            // const ingredientMatch = recipe.ingredients?.some(ing =>
-            //     ing.toLowerCase().includes(query)
-            // );
-            const ingredientMatch = recipe.ingredients?.some(ing => ing.toLowerCase().includes(query));
+            // const ingredientMatch = recipe.ingredients?.some(ing => ing.toLowerCase().includes(query));
             const descMatch = recipe.description?.toLowerCase().includes(query);
 
-            return titleMatch || authorMatch || ingredientMatch || descMatch;
+            return titleMatch || authorMatch || descMatch;
         });
     }
 

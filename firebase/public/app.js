@@ -229,7 +229,7 @@ async function handleImportSubmit(e) {
 
     try {
         // Call Cloud Function to scrape the URL
-        const scrapeRecipe = functions.httpsCallable('scrapeRecipe');
+        const scrapeRecipe = functions.httpsCallable('scrape_recipe');
         const result = await scrapeRecipe({ url });
 
         if (result.data.success) {

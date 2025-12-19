@@ -7,22 +7,14 @@ import json
 import re
 from datetime import datetime
 
-import requests
-from bs4 import BeautifulSoup
-from firebase_admin import initialize_app, firestore, storage
-from firebase_functions import https_fn, options
+from firebase_functions import https_fn
+from firebase_admin import initialize_app, firestore
 
 # Initialize Firebase Admin
-initialize_app()
-
-# CORS configuration
-cors_options = options.CorsOptions(
-    cors_origins=["*"],
-    cors_methods=["POST"],
-)
+app = initialize_app()
 
 
-@https_fn.on_call(cors=cors_options)
+@https_fn.on_call()
 def scrape_recipe(req: https_fn.CallableRequest) -> dict:
     """
     Scrape a recipe from a URL and save it to Firestore.
@@ -33,6 +25,10 @@ def scrape_recipe(req: https_fn.CallableRequest) -> dict:
     Returns:
         dict with success status and recipe data or error message
     """
+    # Import here to avoid startup timeout
+    import requests
+    from bs4 import BeautifulSoup
+
     # Check authentication
     if not req.auth:
         return {"success": False, "error": "You must be signed in to import recipes."}
@@ -101,7 +97,7 @@ def scrape_recipe(req: https_fn.CallableRequest) -> dict:
         return {"success": False, "error": "An unexpected error occurred. Please try again."}
 
 
-def extract_json_ld_recipe(soup: BeautifulSoup, url: str) -> dict | None:
+def extract_json_ld_recipe(soup, url: str) -> dict | None:
     """Extract recipe data from JSON-LD structured data."""
 
     scripts = soup.find_all("script", type="application/ld+json")
@@ -287,7 +283,7 @@ def parse_nutrition(nutrition_data) -> dict | None:
     return result if result else None
 
 
-def extract_html_recipe(soup: BeautifulSoup, url: str) -> dict | None:
+def extract_html_recipe(soup, url: str) -> dict | None:
     """Fallback: Extract recipe from common HTML patterns."""
 
     # Try to get title
@@ -359,4 +355,3 @@ def extract_html_recipe(soup: BeautifulSoup, url: str) -> dict | None:
         "instructions": instructions,
         "image_url": image_url,
     }
-

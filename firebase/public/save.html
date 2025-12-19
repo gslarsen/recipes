@@ -279,7 +279,7 @@
         let recipe = null;
         let currentUser = null;
         let dataReceived = false;
-        
+
         // Listen for recipe data via postMessage
         window.addEventListener('message', function(event) {
             // Verify origin
@@ -291,12 +291,12 @@
                 }
             }
         });
-        
+
         // Called when recipe data is received
         function onRecipeReceived() {
             showRecipePreview(recipe);
             status.classList.remove('hidden');
-            
+
             // If user is already signed in, show save button
             if (currentUser && isAuthorized(currentUser)) {
                 setStatus('Ready to save!', 'info');
@@ -308,7 +308,7 @@
                 signInSection.classList.remove('hidden');
             }
         }
-        
+
         // Parse recipe from URL (fallback for small recipes)
         function getRecipeFromUrl() {
             const params = new URLSearchParams(window.location.search);
@@ -431,7 +431,7 @@
         function init() {
             // Try to get recipe from URL first (for small recipes)
             recipe = getRecipeFromUrl();
-            
+
             if (recipe) {
                 // Got recipe from URL
                 dataReceived = true;
@@ -439,7 +439,7 @@
             } else {
                 // Wait for recipe data via postMessage
                 setStatus('Waiting for recipe data...', 'loading');
-                
+
                 // Timeout after 10 seconds
                 setTimeout(() => {
                     if (!dataReceived) {
@@ -447,15 +447,15 @@
                     }
                 }, 10000);
             }
-            
+
             // Listen for auth state
             auth.onAuthStateChanged((user) => {
                 currentUser = user;
-                
+
                 if (user) {
                     showUserInfo(user);
                     signInSection.classList.add('hidden');
-                    
+
                     if (dataReceived && recipe) {
                         if (isAuthorized(user)) {
                             setStatus('Ready to save!', 'info');
@@ -473,7 +473,7 @@
                     }
                 }
             });
-            
+
             // Event listeners
             googleSignIn.onclick = signIn;
             signOutLink.onclick = (e) => {

@@ -781,6 +781,40 @@ body {
     flex-shrink: 0;
 }
 
+/* Delete Recipe Button */
+.delete-recipe-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin-top: var(--space-xl);
+    padding: var(--space-sm) var(--space-lg);
+    background: transparent;
+    border: 1px solid #dc3545;
+    border-radius: 8px;
+    color: #dc3545;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    width: 100%;
+}
+
+.delete-recipe-btn:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.delete-recipe-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.delete-recipe-btn svg {
+    flex-shrink: 0;
+}
+
 /* ============================================
    PRINT STYLES
    ============================================ */
@@ -796,7 +830,8 @@ body {
     .main-content,
     .modal-close,
     .print-button,
-    .recipe-source {
+    .recipe-source,
+    .delete-recipe-btn {
         display: none !important;
     }
 

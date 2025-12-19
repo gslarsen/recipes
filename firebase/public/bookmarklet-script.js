@@ -231,10 +231,10 @@
         saveRecipe: function() {
             const self = this;
             const recipeData = this.recipe;
-            
+
             // Open save page
             const saveWindow = window.open('https://pams-recipes.web.app/save.html', '_blank');
-            
+
             // Send recipe data via postMessage once the window loads
             const sendData = function() {
                 if (saveWindow && !saveWindow.closed) {
@@ -244,13 +244,13 @@
                     }, 'https://pams-recipes.web.app');
                 }
             };
-            
+
             // Try sending multiple times to ensure it arrives
             setTimeout(sendData, 500);
             setTimeout(sendData, 1000);
             setTimeout(sendData, 2000);
             setTimeout(sendData, 3000);
-            
+
             this.hide();
         },
 

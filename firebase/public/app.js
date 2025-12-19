@@ -493,11 +493,63 @@ function openRecipeModal(recipe) {
     modalContent.innerHTML = createRecipeDetail(recipe);
     modalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
+    
+    // Attach delete handler if button exists
+    const deleteBtn = modalContent.querySelector('.delete-recipe-btn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => confirmDeleteRecipe(recipe));
+    }
 }
 
 function closeModal() {
     modalOverlay.classList.remove('active');
     document.body.style.overflow = '';
+}
+
+async function confirmDeleteRecipe(recipe) {
+    const confirmed = confirm(`Are you sure you want to delete "${recipe.title}"?\n\nThis cannot be undone.`);
+    
+    if (confirmed) {
+        try {
+            // Show loading state on button
+            const deleteBtn = modalContent.querySelector('.delete-recipe-btn');
+            if (deleteBtn) {
+                deleteBtn.disabled = true;
+                deleteBtn.innerHTML = `
+                    <span class="btn-loading" style="display: flex;">
+                        <span class="loading-spinner" style="width: 16px; height: 16px;"></span>
+                        Deleting...
+                    </span>
+                `;
+            }
+            
+            // Delete from Firestore
+            await db.collection('recipes').doc(recipe.id).delete();
+            
+            // Close modal - the recipe will disappear from the list via the real-time listener
+            closeModal();
+            
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('Failed to delete recipe: ' + error.message);
+            
+            // Reset button
+            const deleteBtn = modalContent.querySelector('.delete-recipe-btn');
+            if (deleteBtn) {
+                deleteBtn.disabled = false;
+                deleteBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        <line x1="10" x2="10" y1="11" y2="17"></line>
+                        <line x1="14" x2="14" y1="11" y2="17"></line>
+                    </svg>
+                    Delete Recipe
+                `;
+            }
+        }
+    }
 }
 
 function createRecipeDetail(recipe) {
@@ -538,6 +590,22 @@ function createRecipeDetail(recipe) {
                     View original recipe →
                 </a>
             </div>
+        `
+        : '';
+
+    // Delete button - only show for authorized users
+    const deleteButtonHtml = currentUser && isAuthorizedUser(currentUser)
+        ? `
+            <button class="delete-recipe-btn" type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                    <line x1="10" x2="10" y1="11" y2="17"></line>
+                    <line x1="14" x2="14" y1="11" y2="17"></line>
+                </svg>
+                Delete Recipe
+            </button>
         `
         : '';
 
@@ -608,6 +676,7 @@ function createRecipeDetail(recipe) {
 
                 ${nutritionHtml}
                 ${sourceHtml}
+                ${deleteButtonHtml}
             </div>
         </div>
     `;

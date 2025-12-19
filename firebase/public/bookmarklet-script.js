@@ -138,37 +138,37 @@
         overlay: null,
         modal: null,
         recipe: null,
-        
+
         init: function() {
             // Add styles
             const styleEl = document.createElement('style');
             styleEl.textContent = styles;
             document.head.appendChild(styleEl);
-            
+
             this.show();
         },
-        
+
         show: function() {
             // Extract recipe first
             this.recipe = this.extractRecipe();
-            
+
             // Create overlay
             this.overlay = document.createElement('div');
             this.overlay.className = 'pams-overlay';
             this.overlay.onclick = (e) => {
                 if (e.target === this.overlay) this.hide();
             };
-            
+
             // Create modal
             this.modal = document.createElement('div');
             this.modal.className = 'pams-modal';
-            
+
             this.render();
-            
+
             this.overlay.appendChild(this.modal);
             document.body.appendChild(this.overlay);
         },
-        
+
         hide: function() {
             if (this.overlay) {
                 this.overlay.remove();
@@ -176,10 +176,10 @@
                 this.modal = null;
             }
         },
-        
+
         render: function() {
             const self = this;
-            
+
             // Check if recipe found
             if (!this.recipe) {
                 this.modal.innerHTML = `
@@ -194,12 +194,12 @@
                         <button class="pams-btn pams-btn-secondary">Close</button>
                     </div>
                 `;
-                
+
                 this.modal.querySelector('.pams-close').onclick = () => this.hide();
                 this.modal.querySelector('.pams-btn-secondary').onclick = () => this.hide();
                 return;
             }
-            
+
             // Show recipe preview with save button
             this.modal.innerHTML = `
                 <div class="pams-header">
@@ -219,7 +219,7 @@
                     <button class="pams-btn pams-btn-secondary">Cancel</button>
                 </div>
             `;
-            
+
             this.modal.querySelector('.pams-close').onclick = () => this.hide();
             this.modal.querySelector('.pams-save-btn').onclick = (e) => {
                 e.preventDefault();
@@ -227,24 +227,37 @@
             };
             this.modal.querySelector('.pams-btn-secondary').onclick = () => this.hide();
         },
-        
+
         saveRecipe: function() {
-            // Store recipe data in localStorage (it persists across domains via the save page)
-            const recipeData = JSON.stringify(this.recipe);
+            const self = this;
+            const recipeData = this.recipe;
             
-            // Encode recipe data and open save page
-            const saveUrl = 'https://pams-recipes.web.app/save.html?recipe=' + encodeURIComponent(recipeData);
+            // Open save page
+            const saveWindow = window.open('https://pams-recipes.web.app/save.html', '_blank');
             
-            // Open in new tab (works better on mobile)
-            window.open(saveUrl, '_blank');
+            // Send recipe data via postMessage once the window loads
+            const sendData = function() {
+                if (saveWindow && !saveWindow.closed) {
+                    saveWindow.postMessage({
+                        type: 'PAMS_RECIPE_DATA',
+                        recipe: recipeData
+                    }, 'https://pams-recipes.web.app');
+                }
+            };
+            
+            // Try sending multiple times to ensure it arrives
+            setTimeout(sendData, 500);
+            setTimeout(sendData, 1000);
+            setTimeout(sendData, 2000);
+            setTimeout(sendData, 3000);
             
             this.hide();
         },
-        
+
         extractRecipe: function() {
             // Try JSON-LD first
             const scripts = document.querySelectorAll('script[type="application/ld+json"]');
-            
+
             for (const script of scripts) {
                 try {
                     const data = JSON.parse(script.textContent);
@@ -256,13 +269,13 @@
                     continue;
                 }
             }
-            
+
             return null;
         },
-        
+
         findRecipeInJsonLd: function(data) {
             if (!data) return null;
-            
+
             if (Array.isArray(data)) {
                 for (const item of data) {
                     const result = this.findRecipeInJsonLd(item);
@@ -270,7 +283,7 @@
                 }
                 return null;
             }
-            
+
             if (typeof data === 'object') {
                 const type = data['@type'];
                 if (type === 'Recipe' || (Array.isArray(type) && type.includes('Recipe'))) {
@@ -280,10 +293,10 @@
                     return this.findRecipeInJsonLd(data['@graph']);
                 }
             }
-            
+
             return null;
         },
-        
+
         parseJsonLdRecipe: function(data) {
             return {
                 title: data.name || 'Untitled Recipe',
@@ -300,23 +313,23 @@
                 nutrition: this.parseNutrition(data.nutrition),
             };
         },
-        
+
         parseYield: function(y) {
             if (!y) return null;
             if (Array.isArray(y)) y = y[0];
             return String(y);
         },
-        
+
         parseIngredients: function(ing) {
             if (!ing) return [];
             if (typeof ing === 'string') return [ing];
             return ing.map(i => String(i)).filter(i => i);
         },
-        
+
         parseInstructions: function(inst) {
             if (!inst) return [];
             if (typeof inst === 'string') return inst.split('\n').filter(s => s.trim());
-            
+
             const result = [];
             for (const item of inst) {
                 if (typeof item === 'string') {
@@ -334,7 +347,7 @@
             }
             return result.filter(s => s);
         },
-        
+
         parseImage: function(img) {
             if (!img) return null;
             if (typeof img === 'string') return img;
@@ -346,7 +359,7 @@
             }
             return null;
         },
-        
+
         parseAuthor: function(author) {
             if (!author) return null;
             if (typeof author === 'string') return author;
@@ -358,10 +371,10 @@
             }
             return null;
         },
-        
+
         parseNutrition: function(nutr) {
             if (!nutr || typeof nutr !== 'object') return null;
-            
+
             const fields = [
                 ['calories', 'Calories'],
                 ['fatContent', 'Fat'],
@@ -373,15 +386,15 @@
                 ['sugarContent', 'Sugar'],
                 ['proteinContent', 'Protein'],
             ];
-            
+
             const result = {};
             for (const [field, label] of fields) {
                 if (nutr[field]) result[label] = nutr[field];
             }
-            
+
             return Object.keys(result).length ? result : null;
         },
-        
+
         escapeHtml: function(text) {
             if (!text) return '';
             const div = document.createElement('div');

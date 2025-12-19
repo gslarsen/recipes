@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pam's Recipe Collection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-content">
+      <h1 class="site-title">Pam's Recipe Collection</h1>
+      <div class="search-container">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Search recipes..." class="search-input">
+      </div>
+      <div class="sort-container">
+        <label for="sortSelect">Sort by:</label>
+        <select id="sortSelect" class="sort-select">
+          <option value="newest">Newest</option>
+          <option value="az">A-Z</option>
+          <option value="za">Z-A</option>
+          <option value="author">Author</option>
+        </select>
+      </div>
+      <div class="auth-container" id="authContainer">
+        <!-- Auth button inserted by JS -->
+      </div>
+    </div>
+    <div class="header-secondary">
+      <div class="recipe-count">
+        <span id="recipeCount">0</span> recipes
+      </div>
+      <div class="add-recipe-buttons" id="addRecipeButtons" style="display: none;">
+        <button class="add-button" id="importFromWebBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+            <path d="M2 12h20"></path>
+          </svg>
+          Import from Web
+        </button>
+        <button class="add-button" id="createRecipeBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 5v14"></path>
+            <path d="M5 12h14"></path>
+          </svg>
+          Create Recipe
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="recipe-grid" id="recipeGrid">
+      <!-- Recipe cards will be inserted here -->
+    </div>
+  </main>
+
+  <!-- Recipe Detail Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="recipeModal">
+      <button class="modal-close" id="modalClose" aria-label="Close recipe">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"></path>
+          <path d="m6 6 12 12"></path>
+        </svg>
+      </button>
+      <div class="modal-content" id="modalContent">
+        <!-- Recipe details will be inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Import from Web Modal -->
+  <div class="modal-overlay" id="importModalOverlay">
+    <div class="modal import-modal">
+      <button class="modal-close" id="importModalClose" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"></path>
+          <path d="m6 6 12 12"></path>
+        </svg>
+      </button>
+      <div class="import-modal-content">
+        <h2 class="modal-title">Import from Web</h2>
+        <p class="modal-description">Paste a recipe URL from any website. We'll automatically extract the recipe details.</p>
+        <form id="importForm">
+          <div class="form-group">
+            <label for="recipeUrl">Recipe URL</label>
+            <input type="url" id="recipeUrl" placeholder="https://www.foodnetwork.com/recipes/..." required>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" id="cancelImport">Cancel</button>
+            <button type="submit" class="btn-primary" id="submitImport">
+              <span class="btn-text">Import Recipe</span>
+              <span class="btn-loading" style="display: none;">
+                <svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+                  <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path>
+                </svg>
+                Importing...
+              </span>
+            </button>
+          </div>
+        </form>
+        <div id="importError" class="error-message" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Recipe Modal -->
+  <div class="modal-overlay" id="createModalOverlay">
+    <div class="modal create-modal">
+      <button class="modal-close" id="createModalClose" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"></path>
+          <path d="m6 6 12 12"></path>
+        </svg>
+      </button>
+      <div class="create-modal-content">
+        <h2 class="modal-title">Create Personal Recipe</h2>
+        <form id="createForm">
+          <!-- Photo Upload -->
+          <div class="photo-upload-area" id="photoUploadArea">
+            <input type="file" id="recipePhoto" accept="image/*" hidden>
+            <div class="photo-placeholder" id="photoPlaceholder">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+                <circle cx="9" cy="9" r="2"></circle>
+                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+              </svg>
+              <span>Add a Photo</span>
+            </div>
+            <img id="photoPreview" class="photo-preview" style="display: none;">
+          </div>
+
+          <!-- Recipe Title -->
+          <div class="form-group">
+            <label for="recipeTitle">Recipe Title <span class="required">*</span></label>
+            <input type="text" id="recipeTitle" placeholder="Recipe Title" required>
+          </div>
+
+          <!-- Time -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>Time</label>
+              <div class="time-inputs">
+                <input type="number" id="timeHours" min="0" max="99" placeholder="00">
+                <span>hrs</span>
+                <input type="number" id="timeMins" min="0" max="59" placeholder="00">
+                <span>mins</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="recipeYield">Yield</label>
+              <input type="text" id="recipeYield" placeholder="Servings">
+            </div>
+          </div>
+
+          <!-- Ingredients -->
+          <div class="form-group">
+            <label for="recipeIngredients">Ingredients</label>
+            <textarea id="recipeIngredients" rows="6" placeholder="Enter each ingredient on a new line"></textarea>
+          </div>
+
+          <!-- Directions -->
+          <div class="form-group">
+            <label for="recipeDirections">Directions</label>
+            <textarea id="recipeDirections" rows="8" placeholder="Enter each step on a new line"></textarea>
+          </div>
+
+          <!-- Notes -->
+          <div class="form-group">
+            <label for="recipeNotes">Your Notes (optional)</label>
+            <textarea id="recipeNotes" rows="3" placeholder="Add an optional note"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" id="cancelCreate">Cancel</button>
+            <button type="submit" class="btn-primary" id="submitCreate">
+              <span class="btn-text">Save Recipe</span>
+              <span class="btn-loading" style="display: none;">
+                <svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+                  <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path>
+                </svg>
+                Saving...
+              </span>
+            </button>
+          </div>
+        </form>
+        <div id="createError" class="error-message" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-functions-compat.js"></script>
+  
+  <!-- App Config (to be filled in after Firebase setup) -->
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>
+

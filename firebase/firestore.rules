@@ -1,0 +1,22 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Recipes collection
+    match /recipes/{recipeId} {
+      // Anyone can read recipes
+      allow read: if true;
+      
+      // Only authenticated users can create/update/delete
+      allow create, update, delete: if request.auth != null 
+        && request.auth.token.email in ['gregorylarsen@gmail.com', 'INSERT_PAM_EMAIL'];
+    }
+    
+    // User preferences (if needed later)
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+

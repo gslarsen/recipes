@@ -26,26 +26,26 @@ cors_options = options.CorsOptions(
 def scrape_recipe(req: https_fn.CallableRequest) -> dict:
     """
     Scrape a recipe from a URL and save it to Firestore.
-    
+
     Args:
         req: The request object containing the URL to scrape
-        
+
     Returns:
         dict with success status and recipe data or error message
     """
     # Check authentication
     if not req.auth:
         return {"success": False, "error": "You must be signed in to import recipes."}
-    
+
     # Get URL from request
     url = req.data.get("url", "").strip()
     if not url:
         return {"success": False, "error": "Please provide a recipe URL."}
-    
+
     # Validate URL
     if not url.startswith(("http://", "https://")):
         return {"success": False, "error": "Please provide a valid URL starting with http:// or https://"}
-    
+
     try:
         # Fetch the page
         headers = {
@@ -53,37 +53,37 @@ def scrape_recipe(req: https_fn.CallableRequest) -> dict:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.5",
         }
-        
+
         response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
-        
+
         # Parse HTML
         soup = BeautifulSoup(response.text, "html.parser")
-        
+
         # Try to extract JSON-LD recipe data
         recipe_data = extract_json_ld_recipe(soup, url)
-        
+
         if not recipe_data:
             # Fallback to HTML parsing
             recipe_data = extract_html_recipe(soup, url)
-        
+
         if not recipe_data or not recipe_data.get("title"):
             return {"success": False, "error": "Could not find recipe data on this page. Try a different URL."}
-        
+
         # Add metadata
         recipe_data["date_added"] = datetime.now().isoformat()
         recipe_data["source"] = "imported"
         recipe_data["imported_by"] = req.auth.uid
-        
+
         # Check for duplicates
         db = firestore.client()
         existing = db.collection("recipes").where("url", "==", url).limit(1).get()
         if list(existing):
             return {"success": False, "error": "This recipe has already been imported."}
-        
+
         # Save to Firestore
         doc_ref = db.collection("recipes").add(recipe_data)
-        
+
         return {
             "success": True,
             "recipe": {
@@ -91,7 +91,7 @@ def scrape_recipe(req: https_fn.CallableRequest) -> dict:
                 "title": recipe_data.get("title"),
             }
         }
-        
+
     except requests.exceptions.Timeout:
         return {"success": False, "error": "The website took too long to respond. Please try again."}
     except requests.exceptions.RequestException as e:
@@ -103,9 +103,9 @@ def scrape_recipe(req: https_fn.CallableRequest) -> dict:
 
 def extract_json_ld_recipe(soup: BeautifulSoup, url: str) -> dict | None:
     """Extract recipe data from JSON-LD structured data."""
-    
+
     scripts = soup.find_all("script", type="application/ld+json")
-    
+
     for script in scripts:
         try:
             data = json.loads(script.string)
@@ -114,13 +114,13 @@ def extract_json_ld_recipe(soup: BeautifulSoup, url: str) -> dict | None:
                 return parse_json_ld_recipe(recipe, url)
         except (json.JSONDecodeError, TypeError):
             continue
-    
+
     return None
 
 
 def find_recipe_in_json_ld(data) -> dict | None:
     """Find Recipe object in JSON-LD data (handles various structures)."""
-    
+
     if isinstance(data, dict):
         if data.get("@type") == "Recipe":
             return data
@@ -133,13 +133,13 @@ def find_recipe_in_json_ld(data) -> dict | None:
             result = find_recipe_in_json_ld(item)
             if result:
                 return result
-    
+
     return None
 
 
 def parse_json_ld_recipe(data: dict, url: str) -> dict:
     """Parse a JSON-LD Recipe object into our format."""
-    
+
     recipe = {
         "title": data.get("name", "Untitled Recipe"),
         "url": url,
@@ -155,7 +155,7 @@ def parse_json_ld_recipe(data: dict, url: str) -> dict:
         "categories": parse_categories(data),
         "nutrition": parse_nutrition(data.get("nutrition")),
     }
-    
+
     # Remove None values
     return {k: v for k, v in recipe.items() if v is not None}
 
@@ -182,12 +182,12 @@ def parse_instructions(instructions) -> list:
     """Parse instructions list (handles HowToStep, HowToSection, strings)."""
     if not instructions:
         return []
-    
+
     result = []
-    
+
     if isinstance(instructions, str):
         return [s.strip() for s in instructions.split("\n") if s.strip()]
-    
+
     for item in instructions:
         if isinstance(item, str):
             result.append(item)
@@ -203,7 +203,7 @@ def parse_instructions(instructions) -> list:
                 for step in item.get("itemListElement", []):
                     if isinstance(step, dict) and step.get("text"):
                         result.append(step["text"])
-    
+
     return [s for s in result if s]
 
 
@@ -244,21 +244,21 @@ def parse_author(author_data) -> str | None:
 def parse_categories(data: dict) -> list:
     """Parse recipe categories and cuisine."""
     categories = []
-    
+
     if "recipeCategory" in data:
         cat = data["recipeCategory"]
         if isinstance(cat, list):
             categories.extend(cat)
         else:
             categories.append(cat)
-    
+
     if "recipeCuisine" in data:
         cuisine = data["recipeCuisine"]
         if isinstance(cuisine, list):
             categories.extend(cuisine)
         else:
             categories.append(cuisine)
-    
+
     return categories if categories else None
 
 
@@ -266,7 +266,7 @@ def parse_nutrition(nutrition_data) -> dict | None:
     """Parse nutrition information."""
     if not nutrition_data or not isinstance(nutrition_data, dict):
         return None
-    
+
     fields = [
         ("calories", "Calories"),
         ("fatContent", "Fat"),
@@ -278,23 +278,23 @@ def parse_nutrition(nutrition_data) -> dict | None:
         ("sugarContent", "Sugar"),
         ("proteinContent", "Protein"),
     ]
-    
+
     result = {}
     for field, label in fields:
         if field in nutrition_data:
             result[label] = nutrition_data[field]
-    
+
     return result if result else None
 
 
 def extract_html_recipe(soup: BeautifulSoup, url: str) -> dict | None:
     """Fallback: Extract recipe from common HTML patterns."""
-    
+
     # Try to get title
     title = None
     title_selectors = [
         "h1.recipe-title",
-        "h1.entry-title", 
+        "h1.entry-title",
         ".recipe-name",
         "h1",
     ]
@@ -303,10 +303,10 @@ def extract_html_recipe(soup: BeautifulSoup, url: str) -> dict | None:
         if el:
             title = el.get_text(strip=True)
             break
-    
+
     if not title:
         return None
-    
+
     # Try to get ingredients
     ingredients = []
     ingredient_selectors = [
@@ -321,7 +321,7 @@ def extract_html_recipe(soup: BeautifulSoup, url: str) -> dict | None:
         if items:
             ingredients = [item.get_text(strip=True) for item in items]
             break
-    
+
     # Try to get instructions
     instructions = []
     instruction_selectors = [
@@ -337,7 +337,7 @@ def extract_html_recipe(soup: BeautifulSoup, url: str) -> dict | None:
         if items:
             instructions = [item.get_text(strip=True) for item in items]
             break
-    
+
     # Try to get image
     image_url = None
     img_selectors = [
@@ -351,7 +351,7 @@ def extract_html_recipe(soup: BeautifulSoup, url: str) -> dict | None:
         if el:
             image_url = el.get("src") or el.get("data-src")
             break
-    
+
     return {
         "title": title,
         "url": url,

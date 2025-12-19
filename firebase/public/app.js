@@ -57,7 +57,7 @@ function init() {
 function setupAuth() {
     // Create auth button
     updateAuthUI(null);
-    
+
     // Listen for auth state changes
     auth.onAuthStateChanged((user) => {
         currentUser = user;
@@ -125,9 +125,8 @@ window.signOut = signOut;
 // ============================================
 
 function loadRecipes() {
-    // Real-time listener for recipes
+    // Real-time listener for recipes (sorting done client-side)
     unsubscribeRecipes = db.collection('recipes')
-        .orderBy('date_added', 'desc')
         .onSnapshot((snapshot) => {
             allRecipes = [];
             snapshot.forEach((doc) => {
@@ -214,14 +213,14 @@ function closeImportModal() {
 
 async function handleImportSubmit(e) {
     e.preventDefault();
-    
+
     const url = document.getElementById('recipeUrl').value.trim();
     if (!url) return;
 
     const submitBtn = document.getElementById('submitImport');
     const btnText = submitBtn.querySelector('.btn-text');
     const btnLoading = submitBtn.querySelector('.btn-loading');
-    
+
     // Show loading state
     btnText.style.display = 'none';
     btnLoading.style.display = 'flex';
@@ -232,7 +231,7 @@ async function handleImportSubmit(e) {
         // Call Cloud Function to scrape the URL
         const scrapeRecipe = functions.httpsCallable('scrapeRecipe');
         const result = await scrapeRecipe({ url });
-        
+
         if (result.data.success) {
             closeImportModal();
             // Recipe will appear via real-time listener
@@ -284,20 +283,20 @@ function closeCreateModal() {
 function handlePhotoSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     // Validate file
     if (!file.type.startsWith('image/')) {
         showCreateError('Please select an image file.');
         return;
     }
-    
+
     if (file.size > 5 * 1024 * 1024) {
         showCreateError('Image must be less than 5MB.');
         return;
     }
-    
+
     selectedPhotoFile = file;
-    
+
     // Show preview
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -310,14 +309,14 @@ function handlePhotoSelect(e) {
 
 async function handleCreateSubmit(e) {
     e.preventDefault();
-    
+
     const title = document.getElementById('recipeTitle').value.trim();
     if (!title) return;
 
     const submitBtn = document.getElementById('submitCreate');
     const btnText = submitBtn.querySelector('.btn-text');
     const btnLoading = submitBtn.querySelector('.btn-loading');
-    
+
     // Show loading state
     btnText.style.display = 'none';
     btnLoading.style.display = 'flex';
@@ -326,13 +325,13 @@ async function handleCreateSubmit(e) {
 
     try {
         let imageUrl = null;
-        
+
         // Upload photo if selected
         if (selectedPhotoFile) {
             const fileExt = selectedPhotoFile.name.split('.').pop();
             const fileName = `${Date.now()}-${slugify(title)}.${fileExt}`;
             const storageRef = storage.ref(`images/${fileName}`);
-            
+
             await storageRef.put(selectedPhotoFile);
             imageUrl = await storageRef.getDownloadURL();
         }
@@ -340,12 +339,12 @@ async function handleCreateSubmit(e) {
         // Parse ingredients and instructions
         const ingredientsText = document.getElementById('recipeIngredients').value;
         const directionsText = document.getElementById('recipeDirections').value;
-        
+
         const ingredients = ingredientsText
             .split('\n')
             .map(line => line.trim())
             .filter(line => line.length > 0);
-        
+
         const instructions = directionsText
             .split('\n')
             .map(line => line.trim())
@@ -380,10 +379,10 @@ async function handleCreateSubmit(e) {
         });
 
         await db.collection('recipes').add(recipeData);
-        
+
         closeCreateModal();
         // Recipe will appear via real-time listener
-        
+
     } catch (error) {
         console.error('Create error:', error);
         showCreateError(error.message || 'Failed to save recipe. Please try again.');
@@ -437,7 +436,7 @@ function renderRecipes() {
 function createRecipeCard(recipe, index) {
     const totalTime = formatDuration(recipe.total_time);
     const servings = recipe.servings ? recipe.servings.replace(/^(yields?|makes?|serves?):?\s*/i, '') : '';
-    const imageUrl = recipe.local_image_path || recipe.image_url;
+    const imageUrl = getImageUrl(recipe);
     const isPersonal = recipe.source === 'personal';
 
     return `
@@ -495,7 +494,7 @@ function createRecipeDetail(recipe) {
     const cookTime = formatDuration(recipe.cook_time);
     const totalTime = formatDuration(recipe.total_time);
     const servings = recipe.servings ? recipe.servings.replace(/^(yields?|makes?|serves?):?\s*/i, '') : '';
-    const imageUrl = recipe.local_image_path || recipe.image_url;
+    const imageUrl = getImageUrl(recipe);
 
     const ingredientsList = recipe.ingredients
         ? recipe.ingredients.map(ing => `<li>${escapeHtml(ing)}</li>`).join('')
@@ -724,5 +723,19 @@ function debounce(func, wait) {
 
 function getPlaceholderSVGRaw() {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" x2="18" y1="17" y2="17"/></svg>`;
+}
+
+// Get image URL - convert local_image_path to Cloud Storage URL
+function getImageUrl(recipe) {
+    // If it's already a full URL (http/https), use it directly
+    if (recipe.image_url && recipe.image_url.startsWith('http')) {
+        return recipe.image_url;
+    }
+    // If we have a local_image_path, construct the Cloud Storage URL
+    if (recipe.local_image_path) {
+        return `https://storage.googleapis.com/pams-recipes.firebasestorage.app/${recipe.local_image_path}`;
+    }
+    // Fallback to image_url if it exists
+    return recipe.image_url || null;
 }
 

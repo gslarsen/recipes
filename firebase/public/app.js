@@ -493,7 +493,7 @@ function openRecipeModal(recipe) {
     modalContent.innerHTML = createRecipeDetail(recipe);
     modalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
-    
+
     // Attach delete handler if button exists
     const deleteBtn = modalContent.querySelector('.delete-recipe-btn');
     if (deleteBtn) {
@@ -508,7 +508,7 @@ function closeModal() {
 
 async function confirmDeleteRecipe(recipe) {
     const confirmed = confirm(`Are you sure you want to delete "${recipe.title}"?\n\nThis cannot be undone.`);
-    
+
     if (confirmed) {
         try {
             // Show loading state on button
@@ -522,17 +522,17 @@ async function confirmDeleteRecipe(recipe) {
                     </span>
                 `;
             }
-            
+
             // Delete from Firestore
             await db.collection('recipes').doc(recipe.id).delete();
-            
+
             // Close modal - the recipe will disappear from the list via the real-time listener
             closeModal();
-            
+
         } catch (error) {
             console.error('Delete error:', error);
             alert('Failed to delete recipe: ' + error.message);
-            
+
             // Reset button
             const deleteBtn = modalContent.querySelector('.delete-recipe-btn');
             if (deleteBtn) {

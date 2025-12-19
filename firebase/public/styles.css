@@ -786,24 +786,23 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-sm);
+    gap: 6px;
     margin-top: var(--space-xl);
-    padding: var(--space-sm) var(--space-lg);
+    padding: 8px 16px;
     background: transparent;
-    border: 1px solid #dc3545;
-    border-radius: 8px;
-    color: #dc3545;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-muted);
     font-family: var(--font-body);
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 0.8rem;
+    font-weight: 400;
     cursor: pointer;
     transition: var(--transition-fast);
-    width: 100%;
 }
 
 .delete-recipe-btn:hover {
-    background: #dc3545;
-    color: white;
+    background: #fef2f2;
+    color: #b91c1c;
 }
 
 .delete-recipe-btn:disabled {
@@ -813,6 +812,8 @@ body {
 
 .delete-recipe-btn svg {
     flex-shrink: 0;
+    width: 14px;
+    height: 14px;
 }
 
 /* ============================================

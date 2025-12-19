@@ -12,32 +12,32 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
             background: linear-gradient(135deg, #fef7f0 0%, #fff5eb 100%);
             min-height: 100vh;
             padding: 2rem;
         }
-        
+
         .container {
             max-width: 700px;
             margin: 0 auto;
         }
-        
+
         h1 {
             font-family: 'Playfair Display', Georgia, serif;
             font-size: 2.5rem;
             color: #2d2a26;
             margin-bottom: 0.5rem;
         }
-        
+
         .subtitle {
             color: #6b6560;
             font-size: 1.1rem;
             margin-bottom: 2rem;
         }
-        
+
         .card {
             background: white;
             border-radius: 16px;
@@ -45,14 +45,14 @@
             box-shadow: 0 4px 24px rgba(0,0,0,0.08);
             margin-bottom: 2rem;
         }
-        
+
         h2 {
             font-family: 'Playfair Display', Georgia, serif;
             font-size: 1.5rem;
             color: #2d2a26;
             margin-bottom: 1rem;
         }
-        
+
         .bookmarklet-container {
             display: flex;
             align-items: center;
@@ -63,7 +63,7 @@
             border: 2px dashed #d4a574;
             margin-bottom: 1.5rem;
         }
-        
+
         .bookmarklet-link {
             display: inline-flex;
             align-items: center;
@@ -79,46 +79,46 @@
             transition: transform 0.2s, box-shadow 0.2s;
             white-space: nowrap;
         }
-        
+
         .bookmarklet-link:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(200, 90, 56, 0.3);
         }
-        
+
         .bookmarklet-link:active {
             cursor: grabbing;
         }
-        
+
         .bookmarklet-link svg {
             width: 20px;
             height: 20px;
         }
-        
+
         .drag-instruction {
             color: #6b6560;
             font-size: 0.95rem;
             line-height: 1.5;
         }
-        
+
         .drag-instruction strong {
             color: #2d2a26;
         }
-        
+
         .steps {
             counter-reset: step;
         }
-        
+
         .step {
             display: flex;
             gap: 1rem;
             margin-bottom: 1.25rem;
             align-items: flex-start;
         }
-        
+
         .step:last-child {
             margin-bottom: 0;
         }
-        
+
         .step-number {
             width: 32px;
             height: 32px;
@@ -132,13 +132,13 @@
             font-size: 0.9rem;
             flex-shrink: 0;
         }
-        
+
         .step-content {
             padding-top: 4px;
             color: #4a4540;
             line-height: 1.6;
         }
-        
+
         .step-content code {
             background: #f5f0eb;
             padding: 0.125rem 0.375rem;
@@ -147,14 +147,14 @@
             font-size: 0.875rem;
             color: #c85a38;
         }
-        
+
         .works-on {
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
             margin-top: 1rem;
         }
-        
+
         .works-on-tag {
             padding: 0.375rem 0.75rem;
             background: #e8f5e9;
@@ -163,12 +163,12 @@
             font-size: 0.85rem;
             font-weight: 500;
         }
-        
+
         .works-on-tag.highlight {
             background: #fff3e0;
             color: #e65100;
         }
-        
+
         .note {
             background: #fff8e1;
             border-left: 4px solid #ffc107;
@@ -178,7 +178,7 @@
             font-size: 0.9rem;
             color: #5d4037;
         }
-        
+
         .back-link {
             display: inline-flex;
             align-items: center;
@@ -188,7 +188,7 @@
             font-weight: 500;
             margin-bottom: 1.5rem;
         }
-        
+
         .back-link:hover {
             text-decoration: underline;
         }
@@ -202,10 +202,10 @@
             </svg>
             Back to Recipes
         </a>
-        
+
         <h1>Save to Pam's Recipes</h1>
         <p class="subtitle">One-click recipe saving from any website</p>
-        
+
         <div class="card">
             <h2>Get the Bookmarklet</h2>
             <div class="bookmarklet-container">
@@ -219,7 +219,7 @@
                     <strong>Drag this button</strong> to your bookmarks bar to install it!
                 </div>
             </div>
-            
+
             <h2>How to Use</h2>
             <div class="steps">
                 <div class="step">
@@ -247,12 +247,46 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="note">
                 <strong>Note:</strong> You must be signed in to Pam's Recipe Collection for this to work. The bookmarklet will prompt you to sign in if needed.
             </div>
         </div>
-        
+
+        <div class="card">
+            <h2>📱 iPad / iPhone Setup</h2>
+            <p style="color: #6b6560; margin-bottom: 1rem;">Since you can't drag on mobile, follow these steps:</p>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <strong>Bookmark this page first:</strong> Tap the Share button (□↑) and tap "Add Bookmark". Name it "Save to Pam's" and save it.
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <strong>Copy the code below:</strong> Tap and hold to select, then copy.
+                    </div>
+                </div>
+            </div>
+            <div class="code-box" style="background: #f5f0e8; padding: 1rem; border-radius: 8px; margin: 1rem 0; font-family: monospace; font-size: 0.75rem; word-break: break-all; user-select: all; -webkit-user-select: all;">javascript:(function(){const s=document.createElement('script');s.src='https://pams-recipes.web.app/bookmarklet-script.js?t='+Date.now();document.body.appendChild(s);})();</div>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <strong>Edit the bookmark:</strong> Open Bookmarks, find "Save to Pam's", tap Edit, and <strong>replace the URL</strong> with the code you copied.
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <strong>To use:</strong> When viewing a recipe, tap the address bar and start typing "Save to Pam's" - tap the bookmark when it appears!
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="card">
             <h2>Works With</h2>
             <p style="color: #6b6560; margin-bottom: 1rem;">The bookmarklet works with most recipe websites, including:</p>

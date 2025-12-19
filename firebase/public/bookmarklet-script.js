@@ -166,33 +166,33 @@
         recipe: null,
         user: null,
         auth: null,
-        
+
         init: function() {
             // Add styles
             const styleEl = document.createElement('style');
             styleEl.textContent = styles;
             document.head.appendChild(styleEl);
-            
+
             // Load Firebase
             this.loadFirebase();
         },
-        
+
         loadFirebase: function() {
             const self = this;
-            
+
             // Check if Firebase is already loaded
             if (window.firebase && window.firebase.auth) {
                 self.setupAuth();
                 return;
             }
-            
+
             // Load Firebase scripts
             const scripts = [
                 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js',
                 'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js',
                 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js'
             ];
-            
+
             let loaded = 0;
             scripts.forEach(src => {
                 const script = document.createElement('script');
@@ -206,46 +206,46 @@
                 document.head.appendChild(script);
             });
         },
-        
+
         setupAuth: function() {
             const self = this;
-            
+
             // Initialize Firebase if not already done
             if (!firebase.apps.length) {
                 firebase.initializeApp(FIREBASE_CONFIG);
             }
-            
+
             this.auth = firebase.auth();
             this.db = firebase.firestore();
-            
+
             // Check auth state
             this.auth.onAuthStateChanged(function(user) {
                 self.user = user;
                 self.show();
             });
         },
-        
+
         show: function() {
             // Extract recipe first
             this.recipe = this.extractRecipe();
-            
+
             // Create overlay
             this.overlay = document.createElement('div');
             this.overlay.className = 'pams-overlay';
             this.overlay.onclick = (e) => {
                 if (e.target === this.overlay) this.hide();
             };
-            
+
             // Create modal
             this.modal = document.createElement('div');
             this.modal.className = 'pams-modal';
-            
+
             this.render();
-            
+
             this.overlay.appendChild(this.modal);
             document.body.appendChild(this.overlay);
         },
-        
+
         hide: function() {
             if (this.overlay) {
                 this.overlay.remove();
@@ -253,10 +253,10 @@
                 this.modal = null;
             }
         },
-        
+
         render: function() {
             const self = this;
-            
+
             if (!this.user) {
                 // Show sign in
                 this.modal.innerHTML = `
@@ -277,12 +277,12 @@
                         </button>
                     </div>
                 `;
-                
+
                 this.modal.querySelector('.pams-close').onclick = () => this.hide();
                 this.modal.querySelector('.pams-google-btn').onclick = () => this.signIn();
                 return;
             }
-            
+
             // Check if authorized
             if (!AUTHORIZED_EMAILS.includes(this.user.email)) {
                 this.modal.innerHTML = `
@@ -297,12 +297,12 @@
                         <button class="pams-btn pams-btn-secondary">Close</button>
                     </div>
                 `;
-                
+
                 this.modal.querySelector('.pams-close').onclick = () => this.hide();
                 this.modal.querySelector('.pams-btn-secondary').onclick = () => this.hide();
                 return;
             }
-            
+
             // Check if recipe found
             if (!this.recipe) {
                 this.modal.innerHTML = `
@@ -317,12 +317,12 @@
                         <button class="pams-btn pams-btn-secondary">Close</button>
                     </div>
                 `;
-                
+
                 this.modal.querySelector('.pams-close').onclick = () => this.hide();
                 this.modal.querySelector('.pams-btn-secondary').onclick = () => this.hide();
                 return;
             }
-            
+
             // Show recipe preview
             this.modal.innerHTML = `
                 <div class="pams-header">
@@ -343,26 +343,26 @@
                     <button class="pams-btn pams-btn-secondary">Cancel</button>
                 </div>
             `;
-            
+
             this.modal.querySelector('.pams-close').onclick = () => this.hide();
             this.modal.querySelector('.pams-save-btn').onclick = () => this.saveRecipe();
             this.modal.querySelector('.pams-btn-secondary').onclick = () => this.hide();
         },
-        
+
         signIn: function() {
             const self = this;
             const provider = new firebase.auth.GoogleAuthProvider();
-            
+
             this.auth.signInWithPopup(provider).catch(function(error) {
                 console.error('Sign in error:', error);
                 alert('Failed to sign in: ' + error.message);
             });
         },
-        
+
         extractRecipe: function() {
             // Try JSON-LD first
             const scripts = document.querySelectorAll('script[type="application/ld+json"]');
-            
+
             for (const script of scripts) {
                 try {
                     const data = JSON.parse(script.textContent);
@@ -374,13 +374,13 @@
                     continue;
                 }
             }
-            
+
             return null;
         },
-        
+
         findRecipeInJsonLd: function(data) {
             if (!data) return null;
-            
+
             if (Array.isArray(data)) {
                 for (const item of data) {
                     const result = this.findRecipeInJsonLd(item);
@@ -388,7 +388,7 @@
                 }
                 return null;
             }
-            
+
             if (typeof data === 'object') {
                 const type = data['@type'];
                 if (type === 'Recipe' || (Array.isArray(type) && type.includes('Recipe'))) {
@@ -398,10 +398,10 @@
                     return this.findRecipeInJsonLd(data['@graph']);
                 }
             }
-            
+
             return null;
         },
-        
+
         parseJsonLdRecipe: function(data) {
             return {
                 title: data.name || 'Untitled Recipe',
@@ -418,23 +418,23 @@
                 nutrition: this.parseNutrition(data.nutrition),
             };
         },
-        
+
         parseYield: function(y) {
             if (!y) return null;
             if (Array.isArray(y)) y = y[0];
             return String(y);
         },
-        
+
         parseIngredients: function(ing) {
             if (!ing) return [];
             if (typeof ing === 'string') return [ing];
             return ing.map(i => String(i)).filter(i => i);
         },
-        
+
         parseInstructions: function(inst) {
             if (!inst) return [];
             if (typeof inst === 'string') return inst.split('\n').filter(s => s.trim());
-            
+
             const result = [];
             for (const item of inst) {
                 if (typeof item === 'string') {
@@ -452,7 +452,7 @@
             }
             return result.filter(s => s);
         },
-        
+
         parseImage: function(img) {
             if (!img) return null;
             if (typeof img === 'string') return img;
@@ -464,7 +464,7 @@
             }
             return null;
         },
-        
+
         parseAuthor: function(author) {
             if (!author) return null;
             if (typeof author === 'string') return author;
@@ -476,10 +476,10 @@
             }
             return null;
         },
-        
+
         parseNutrition: function(nutr) {
             if (!nutr || typeof nutr !== 'object') return null;
-            
+
             const fields = [
                 ['calories', 'Calories'],
                 ['fatContent', 'Fat'],
@@ -491,37 +491,37 @@
                 ['sugarContent', 'Sugar'],
                 ['proteinContent', 'Protein'],
             ];
-            
+
             const result = {};
             for (const [field, label] of fields) {
                 if (nutr[field]) result[label] = nutr[field];
             }
-            
+
             return Object.keys(result).length ? result : null;
         },
-        
+
         saveRecipe: async function() {
             const self = this;
             const statusContainer = this.modal.querySelector('.pams-status-container');
             const saveBtn = this.modal.querySelector('.pams-save-btn');
-            
+
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving...';
             statusContainer.innerHTML = '<div class="pams-status loading">Saving recipe...</div>';
-            
+
             try {
                 // Check for duplicates
                 const existing = await this.db.collection('recipes')
                     .where('url', '==', this.recipe.url)
                     .limit(1)
                     .get();
-                
+
                 if (!existing.empty) {
                     statusContainer.innerHTML = '<div class="pams-status error">This recipe has already been saved!</div>';
                     saveBtn.textContent = 'Already Saved';
                     return;
                 }
-                
+
                 // Add metadata
                 const recipeData = {
                     ...this.recipe,
@@ -529,21 +529,21 @@
                     source: 'bookmarklet',
                     imported_by: this.user.uid,
                 };
-                
+
                 // Remove null values
                 Object.keys(recipeData).forEach(key => {
                     if (recipeData[key] === null) delete recipeData[key];
                 });
-                
+
                 // Save to Firestore
                 await this.db.collection('recipes').add(recipeData);
-                
+
                 statusContainer.innerHTML = '<div class="pams-status success">✓ Recipe saved successfully!</div>';
                 saveBtn.textContent = 'Saved!';
-                
+
                 // Auto close after 2 seconds
                 setTimeout(() => self.hide(), 2000);
-                
+
             } catch (error) {
                 console.error('Save error:', error);
                 statusContainer.innerHTML = `<div class="pams-status error">Error: ${error.message}</div>`;
@@ -551,7 +551,7 @@
                 saveBtn.textContent = 'Try Again';
             }
         },
-        
+
         escapeHtml: function(text) {
             if (!text) return '';
             const div = document.createElement('div');

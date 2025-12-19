@@ -1149,7 +1149,22 @@ body {
 .modal-description {
     color: var(--text-secondary);
     font-size: 0.95rem;
+    margin-bottom: var(--space-sm);
+}
+
+.modal-tip {
+    background: #fff8e1;
+    border-left: 3px solid #ffc107;
+    padding: 0.75rem 1rem;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.85rem;
+    color: #5d4037;
     margin-bottom: var(--space-lg);
+}
+
+.modal-tip a {
+    color: var(--accent-warm);
+    font-weight: 600;
 }
 
 /* Form Styles */

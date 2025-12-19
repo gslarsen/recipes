@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Save Recipe - Pam's Recipe Collection</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #fef7f0 0%, #fff5eb 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .container {
+            max-width: 450px;
+            width: 100%;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.5rem;
+            color: #2d2a26;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        .recipe-preview {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: #faf8f5;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .recipe-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #e0e0e0;
+            flex-shrink: 0;
+        }
+        
+        .recipe-info h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2d2a26;
+            margin-bottom: 0.25rem;
+        }
+        
+        .recipe-info p {
+            font-size: 0.85rem;
+            color: #666;
+            margin: 0;
+        }
+        
+        .status {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        .status.loading {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        
+        .status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .status.info {
+            background: #fff8e1;
+            color: #f57c00;
+        }
+        
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 0.875rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #c85a38;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #b84a2a;
+        }
+        
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+            margin-top: 0.5rem;
+        }
+        
+        .btn-google {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            background: white;
+            border: 1px solid #ddd;
+            color: #333;
+        }
+        
+        .btn-google:hover {
+            background: #f8f8f8;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .spinner {
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+        }
+
+        .user-name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .sign-out-link {
+            color: #c85a38;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>Save Recipe</h1>
+            
+            <div id="recipePreview" class="recipe-preview hidden">
+                <img id="previewImage" class="recipe-image" src="" alt="">
+                <div class="recipe-info">
+                    <h2 id="previewTitle"></h2>
+                    <p id="previewAuthor"></p>
+                    <p id="previewIngredients"></p>
+                </div>
+            </div>
+
+            <div id="userInfo" class="user-info hidden">
+                <img id="userAvatar" class="user-avatar" src="" alt="">
+                <span id="userName" class="user-name"></span>
+                <a href="#" id="signOutLink" class="sign-out-link">Sign out</a>
+            </div>
+            
+            <div id="status" class="status loading">
+                <span class="spinner">⏳</span> Loading...
+            </div>
+            
+            <div id="signInSection" class="hidden">
+                <button id="googleSignIn" class="btn btn-google">
+                    <svg width="18" height="18" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Sign in with Google
+                </button>
+            </div>
+            
+            <div id="saveSection" class="hidden">
+                <button id="saveBtn" class="btn btn-primary">Save Recipe</button>
+            </div>
+            
+            <a href="/" class="btn btn-secondary" id="backBtn">Back to Recipes</a>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDuKQTnkseSJnShWm4bCq221Jb6ninil54",
+            authDomain: "pams-recipes.firebaseapp.com",
+            projectId: "pams-recipes",
+            storageBucket: "pams-recipes.firebasestorage.app",
+            messagingSenderId: "602237309084",
+            appId: "1:602237309084:web:fa5172df011ee68556dd59"
+        };
+        
+        const AUTHORIZED_EMAILS = ['glarsen8172@gmail.com', 'pkglines@gmail.com'];
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        // DOM elements
+        const recipePreview = document.getElementById('recipePreview');
+        const previewImage = document.getElementById('previewImage');
+        const previewTitle = document.getElementById('previewTitle');
+        const previewAuthor = document.getElementById('previewAuthor');
+        const previewIngredients = document.getElementById('previewIngredients');
+        const userInfo = document.getElementById('userInfo');
+        const userAvatar = document.getElementById('userAvatar');
+        const userName = document.getElementById('userName');
+        const signOutLink = document.getElementById('signOutLink');
+        const status = document.getElementById('status');
+        const signInSection = document.getElementById('signInSection');
+        const googleSignIn = document.getElementById('googleSignIn');
+        const saveSection = document.getElementById('saveSection');
+        const saveBtn = document.getElementById('saveBtn');
+        const backBtn = document.getElementById('backBtn');
+        
+        // State
+        let recipe = null;
+        let currentUser = null;
+        
+        // Parse recipe from URL
+        function getRecipeFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const recipeData = params.get('recipe');
+            if (recipeData) {
+                try {
+                    return JSON.parse(decodeURIComponent(recipeData));
+                } catch (e) {
+                    console.error('Failed to parse recipe:', e);
+                }
+            }
+            return null;
+        }
+        
+        // Show recipe preview
+        function showRecipePreview(recipe) {
+            if (recipe.image_url) {
+                previewImage.src = recipe.image_url;
+                previewImage.classList.remove('hidden');
+            }
+            previewTitle.textContent = recipe.title;
+            previewAuthor.textContent = recipe.author ? 'by ' + recipe.author : '';
+            previewIngredients.textContent = recipe.ingredients ? recipe.ingredients.length + ' ingredients' : '';
+            recipePreview.classList.remove('hidden');
+        }
+        
+        // Update status message
+        function setStatus(message, type = 'loading') {
+            status.className = 'status ' + type;
+            if (type === 'loading') {
+                status.innerHTML = '<span class="spinner">⏳</span> ' + message;
+            } else {
+                status.textContent = message;
+            }
+            status.classList.remove('hidden');
+        }
+        
+        // Show user info
+        function showUserInfo(user) {
+            userAvatar.src = user.photoURL || 'https://www.gravatar.com/avatar/?d=mp';
+            userName.textContent = user.displayName || user.email;
+            userInfo.classList.remove('hidden');
+        }
+        
+        // Check if user is authorized
+        function isAuthorized(user) {
+            return user && AUTHORIZED_EMAILS.includes(user.email);
+        }
+        
+        // Save recipe to Firestore
+        async function saveRecipe() {
+            if (!recipe || !currentUser) return;
+            
+            saveBtn.disabled = true;
+            setStatus('Saving recipe...', 'loading');
+            
+            try {
+                // Check for duplicates
+                const existing = await db.collection('recipes')
+                    .where('url', '==', recipe.url)
+                    .limit(1)
+                    .get();
+                
+                if (!existing.empty) {
+                    setStatus('This recipe has already been saved!', 'error');
+                    saveBtn.textContent = 'Already Saved';
+                    return;
+                }
+                
+                // Add metadata
+                const recipeData = {
+                    ...recipe,
+                    date_added: new Date().toISOString(),
+                    source: 'bookmarklet',
+                    imported_by: currentUser.uid,
+                };
+                
+                // Remove null values
+                Object.keys(recipeData).forEach(key => {
+                    if (recipeData[key] === null) delete recipeData[key];
+                });
+                
+                // Save
+                await db.collection('recipes').add(recipeData);
+                
+                setStatus('✓ Recipe saved successfully!', 'success');
+                saveBtn.textContent = 'Saved!';
+                backBtn.textContent = 'View All Recipes';
+                
+            } catch (error) {
+                console.error('Save error:', error);
+                setStatus('Error: ' + error.message, 'error');
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Try Again';
+            }
+        }
+        
+        // Sign in with Google
+        async function signIn() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            try {
+                await auth.signInWithPopup(provider);
+            } catch (error) {
+                // If popup fails (common on mobile), try redirect
+                if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+                    auth.signInWithRedirect(provider);
+                } else {
+                    console.error('Sign in error:', error);
+                    setStatus('Sign in failed: ' + error.message, 'error');
+                }
+            }
+        }
+        
+        // Sign out
+        async function signOut() {
+            await auth.signOut();
+        }
+        
+        // Initialize
+        function init() {
+            // Get recipe from URL
+            recipe = getRecipeFromUrl();
+            
+            if (!recipe) {
+                setStatus('No recipe data found. Please use the bookmarklet from a recipe page.', 'error');
+                return;
+            }
+            
+            showRecipePreview(recipe);
+            
+            // Listen for auth state
+            auth.onAuthStateChanged((user) => {
+                currentUser = user;
+                
+                if (user) {
+                    showUserInfo(user);
+                    signInSection.classList.add('hidden');
+                    
+                    if (isAuthorized(user)) {
+                        setStatus('Ready to save!', 'info');
+                        saveSection.classList.remove('hidden');
+                    } else {
+                        setStatus('Sorry, ' + user.email + ' is not authorized to save recipes.', 'error');
+                    }
+                } else {
+                    userInfo.classList.add('hidden');
+                    saveSection.classList.add('hidden');
+                    setStatus('Sign in to save this recipe', 'info');
+                    signInSection.classList.remove('hidden');
+                }
+            });
+            
+            // Event listeners
+            googleSignIn.onclick = signIn;
+            signOutLink.onclick = (e) => {
+                e.preventDefault();
+                signOut();
+            };
+            saveBtn.onclick = saveRecipe;
+        }
+        
+        // Check for redirect result (for mobile)
+        auth.getRedirectResult().then((result) => {
+            if (result.user) {
+                // User signed in via redirect
+            }
+        }).catch((error) => {
+            console.error('Redirect error:', error);
+        });
+        
+        // Start
+        init();
+    </script>
+</body>
+</html>
+

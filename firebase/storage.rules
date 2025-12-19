@@ -8,9 +8,10 @@ service firebase.storage {
       // Anyone can read images
       allow read: if true;
 
-      // Only authenticated users can upload
+      // Only authorized users can upload
       // Max 5MB, must be an image
       allow write: if request.auth != null
+        && request.auth.token.email in ['glarsen8172@gmail.com', 'pkglines@gmail.com']
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }

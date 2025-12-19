@@ -7,40 +7,86 @@ import json
 import re
 from datetime import datetime
 
-from firebase_functions import https_fn
-from firebase_admin import initialize_app, firestore
+from firebase_functions import https_fn, options
+from firebase_admin import initialize_app, firestore, auth
 
 # Initialize Firebase Admin
 app = initialize_app()
 
+# CORS settings - allow requests from our hosting domain
+cors = options.CorsOptions(
+    cors_origins=["https://pams-recipes.web.app", "https://pams-recipes.firebaseapp.com"],
+    cors_methods=["GET", "POST", "OPTIONS"],
+)
 
-@https_fn.on_call()
-def scrape_recipe(req: https_fn.CallableRequest) -> dict:
+
+@https_fn.on_request(cors=cors)
+def scrape_recipe(req: https_fn.Request) -> https_fn.Response:
     """
     Scrape a recipe from a URL and save it to Firestore.
-
-    Args:
-        req: The request object containing the URL to scrape
-
-    Returns:
-        dict with success status and recipe data or error message
+    HTTP endpoint that handles CORS properly.
     """
     # Import here to avoid startup timeout
     import requests
     from bs4 import BeautifulSoup
 
-    # Check authentication
-    if not req.auth:
-        return {"success": False, "error": "You must be signed in to import recipes."}
+    # Handle preflight OPTIONS request
+    if req.method == "OPTIONS":
+        return https_fn.Response("", status=204)
+
+    # Only accept POST
+    if req.method != "POST":
+        return https_fn.Response(
+            json.dumps({"success": False, "error": "Method not allowed"}),
+            status=405,
+            content_type="application/json"
+        )
+
+    try:
+        data = req.get_json()
+    except Exception:
+        return https_fn.Response(
+            json.dumps({"success": False, "error": "Invalid JSON"}),
+            status=400,
+            content_type="application/json"
+        )
+
+    # Verify authentication
+    auth_header = req.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return https_fn.Response(
+            json.dumps({"success": False, "error": "You must be signed in to import recipes."}),
+            status=401,
+            content_type="application/json"
+        )
+
+    token = auth_header.split("Bearer ")[1]
+    try:
+        decoded_token = auth.verify_id_token(token)
+        user_id = decoded_token["uid"]
+    except Exception as e:
+        return https_fn.Response(
+            json.dumps({"success": False, "error": "Invalid authentication token."}),
+            status=401,
+            content_type="application/json"
+        )
 
     # Get URL from request
-    url = req.data.get("url", "").strip()
+    url = data.get("url", "").strip() if data else ""
     if not url:
-        return {"success": False, "error": "Please provide a recipe URL."}
+        return https_fn.Response(
+            json.dumps({"success": False, "error": "Please provide a recipe URL."}),
+            status=400,
+            content_type="application/json"
+        )
 
     # Validate URL
     if not url.startswith(("http://", "https://")):
-        return {"success": False, "error": "Please provide a valid URL starting with http:// or https://"}
+        return https_fn.Response(
+            json.dumps({"success": False, "error": "Please provide a valid URL starting with http:// or https://"}),
+            status=400,
+            content_type="application/json"
+        )
 
     try:
         # Fetch the page
@@ -64,37 +110,61 @@ def scrape_recipe(req: https_fn.CallableRequest) -> dict:
             recipe_data = extract_html_recipe(soup, url)
 
         if not recipe_data or not recipe_data.get("title"):
-            return {"success": False, "error": "Could not find recipe data on this page. Try a different URL."}
+            return https_fn.Response(
+                json.dumps({"success": False, "error": "Could not find recipe data on this page. Try a different URL."}),
+                status=400,
+                content_type="application/json"
+            )
 
         # Add metadata
         recipe_data["date_added"] = datetime.now().isoformat()
         recipe_data["source"] = "imported"
-        recipe_data["imported_by"] = req.auth.uid
+        recipe_data["imported_by"] = user_id
 
         # Check for duplicates
         db = firestore.client()
         existing = db.collection("recipes").where("url", "==", url).limit(1).get()
         if list(existing):
-            return {"success": False, "error": "This recipe has already been imported."}
+            return https_fn.Response(
+                json.dumps({"success": False, "error": "This recipe has already been imported."}),
+                status=400,
+                content_type="application/json"
+            )
 
         # Save to Firestore
         doc_ref = db.collection("recipes").add(recipe_data)
 
-        return {
-            "success": True,
-            "recipe": {
-                "id": doc_ref[1].id,
-                "title": recipe_data.get("title"),
-            }
-        }
+        return https_fn.Response(
+            json.dumps({
+                "success": True,
+                "recipe": {
+                    "id": doc_ref[1].id,
+                    "title": recipe_data.get("title"),
+                }
+            }),
+            status=200,
+            content_type="application/json"
+        )
 
     except requests.exceptions.Timeout:
-        return {"success": False, "error": "The website took too long to respond. Please try again."}
+        return https_fn.Response(
+            json.dumps({"success": False, "error": "The website took too long to respond. Please try again."}),
+            status=504,
+            content_type="application/json"
+        )
     except requests.exceptions.RequestException as e:
-        return {"success": False, "error": f"Could not access the website: {str(e)}"}
+        return https_fn.Response(
+            json.dumps({"success": False, "error": f"Could not access the website: {str(e)}"}),
+            status=502,
+            content_type="application/json"
+        )
     except Exception as e:
         print(f"Error scraping recipe: {e}")
-        return {"success": False, "error": "An unexpected error occurred. Please try again."}
+        return https_fn.Response(
+            json.dumps({"success": False, "error": "An unexpected error occurred. Please try again."}),
+            status=500,
+            content_type="application/json"
+        )
 
 
 def extract_json_ld_recipe(soup, url: str) -> dict | None:
@@ -118,12 +188,15 @@ def find_recipe_in_json_ld(data) -> dict | None:
     """Find Recipe object in JSON-LD data (handles various structures)."""
 
     if isinstance(data, dict):
-        if data.get("@type") == "Recipe":
+        # Check for @type as string or list
+        type_val = data.get("@type")
+        if type_val == "Recipe" or (isinstance(type_val, list) and "Recipe" in type_val):
             return data
         if "@graph" in data:
             for item in data["@graph"]:
-                if isinstance(item, dict) and item.get("@type") == "Recipe":
-                    return item
+                result = find_recipe_in_json_ld(item)
+                if result:
+                    return result
     elif isinstance(data, list):
         for item in data:
             result = find_recipe_in_json_ld(item)
@@ -188,11 +261,12 @@ def parse_instructions(instructions) -> list:
         if isinstance(item, str):
             result.append(item)
         elif isinstance(item, dict):
-            if item.get("@type") == "HowToStep":
+            item_type = item.get("@type")
+            if item_type == "HowToStep":
                 text = item.get("text", "")
                 if text:
                     result.append(text)
-            elif item.get("@type") == "HowToSection":
+            elif item_type == "HowToSection":
                 section_name = item.get("name", "")
                 if section_name:
                     result.append(f"**{section_name}**")

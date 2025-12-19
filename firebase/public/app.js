@@ -228,15 +228,26 @@ async function handleImportSubmit(e) {
     hideImportError();
 
     try {
-        // Call Cloud Function to scrape the URL
-        const scrapeRecipe = functions.httpsCallable('scrape_recipe');
-        const result = await scrapeRecipe({ url });
+        // Get the user's ID token for authentication
+        const idToken = await currentUser.getIdToken();
 
-        if (result.data.success) {
+        // Call Cloud Function HTTP endpoint
+        const response = await fetch('https://us-central1-pams-recipes.cloudfunctions.net/scrape_recipe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({ url })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
             closeImportModal();
             // Recipe will appear via real-time listener
         } else {
-            showImportError(result.data.error || 'Failed to import recipe. Please try again.');
+            showImportError(result.error || 'Failed to import recipe. Please try again.');
         }
     } catch (error) {
         console.error('Import error:', error);

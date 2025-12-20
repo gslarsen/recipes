@@ -567,6 +567,14 @@ function createRecipeDetail(recipe) {
         ? recipe.instructions.map(inst => `<li>${escapeHtml(inst)}</li>`).join('')
         : '<li>No instructions listed</li>';
 
+    // Shorten long nutrition labels
+    const nutritionLabels = {
+        'Carbohydrates': 'Carbs',
+        'Cholesterol': 'Chol',
+        'Saturated Fat': 'Sat Fat'
+    };
+    const getNutritionLabel = (key) => nutritionLabels[key] || key;
+
     const nutritionHtml = recipe.nutrition && Object.keys(recipe.nutrition).length > 0
         ? `
             <section class="nutrition-section">
@@ -575,7 +583,7 @@ function createRecipeDetail(recipe) {
                     ${Object.entries(recipe.nutrition).map(([key, value]) => `
                         <div class="nutrition-item">
                             <div class="nutrition-value">${escapeHtml(String(value))}</div>
-                            <div class="nutrition-label">${escapeHtml(key)}</div>
+                            <div class="nutrition-label">${escapeHtml(getNutritionLabel(key))}</div>
                         </div>
                     `).join('')}
                 </div>

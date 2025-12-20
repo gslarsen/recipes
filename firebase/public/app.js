@@ -574,7 +574,7 @@ function createRecipeDetail(recipe) {
         'Saturated Fat': 'Sat Fat'
     };
     const getNutritionLabel = (key) => nutritionLabels[key] || key;
-    
+
     // Add space between number and unit (e.g., "3g" -> "3 g")
     const formatNutritionValue = (value) => String(value).replace(/(\d)([a-zA-Z])/g, '$1 $2');
 

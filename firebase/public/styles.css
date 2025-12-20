@@ -343,6 +343,44 @@ body {
     transform: scale(1.1);
 }
 
+/* Board Dropdown Menu */
+.board-dropdown-menu {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px var(--shadow-medium);
+    overflow: hidden;
+    z-index: 1000;
+    min-width: 140px;
+}
+
+.board-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    text-align: left;
+}
+
+.board-menu-item:hover {
+    background: var(--bg-accent);
+}
+
+.board-menu-item-danger {
+    color: #dc3545;
+}
+
+.board-menu-item-danger:hover {
+    background: #fef2f2;
+}
+
 /* Create New Board Card */
 .board-card.create-board {
     border: 2px dashed var(--border-light);

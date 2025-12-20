@@ -485,19 +485,19 @@ function loadBoards() {
 function switchView(view) {
     currentView = view;
     currentBoardFilter = null;
-    
+
     // Update tabs
     recipesTab.classList.toggle('active', view === 'recipes');
     boardsTab.classList.toggle('active', view === 'boards');
-    
+
     // Show/hide views
     recipeGrid.style.display = view === 'recipes' ? 'grid' : 'none';
     boardsView.style.display = view === 'boards' ? 'block' : 'none';
-    
+
     // Remove board view header if exists
     const existingHeader = document.querySelector('.board-view-header');
     if (existingHeader) existingHeader.remove();
-    
+
     // Update count label
     if (view === 'boards') {
         renderBoards();
@@ -540,11 +540,11 @@ function renderBoards() {
         const count = boardCounts[board.id] || 0;
         const coverImage = board.coverImage;
         const showEditBtn = currentUser && isAuthorizedUser(currentUser);
-        
+
         boardsHtml += `
             <div class="board-card" onclick="openBoard('${board.id}')">
                 <div class="board-card-image">
-                    ${coverImage 
+                    ${coverImage
                         ? `<img src="${coverImage}" alt="${escapeHtml(board.name)}" loading="lazy">`
                         : `<div class="board-card-placeholder">${getPlaceholderSVGRaw()}</div>`
                     }
@@ -554,7 +554,7 @@ function renderBoards() {
                     <div class="board-card-count">${count} ${count === 1 ? 'item' : 'items'}</div>
                 </div>
                 ${showEditBtn ? `
-                <button class="board-edit-btn" onclick="event.stopPropagation(); openBoardEditMenu('${board.id}')" aria-label="Edit board">
+                <button class="board-edit-btn" onclick="event.stopPropagation(); openBoardEditMenu('${board.id}', event)" aria-label="Edit board">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="1"></circle>
                         <circle cx="12" cy="5" r="1"></circle>
@@ -640,40 +640,76 @@ function openBoard(boardId) {
     renderRecipes();
 }
 
-function openBoardEditMenu(boardId) {
+function openBoardEditMenu(boardId, event) {
     const board = allBoards.find(b => b.id === boardId);
     if (!board) return;
     
-    const action = prompt(`Board: "${board.name}"\n\nType "rename" to rename this board\nType "delete" to delete this board`);
+    // Remove any existing menu
+    const existingMenu = document.querySelector('.board-dropdown-menu');
+    if (existingMenu) existingMenu.remove();
     
-    if (!action) return;
+    // Create dropdown menu
+    const menu = document.createElement('div');
+    menu.className = 'board-dropdown-menu';
+    menu.innerHTML = `
+        <button class="board-menu-item" onclick="renameBoard('${boardId}', '${escapeHtml(board.name)}')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+            </svg>
+            Rename
+        </button>
+        <button class="board-menu-item board-menu-item-danger" onclick="deleteBoard('${boardId}', '${escapeHtml(board.name)}')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+            </svg>
+            Delete
+        </button>
+    `;
     
-    if (action.toLowerCase() === 'rename') {
-        renameBoard(boardId, board.name);
-    } else if (action.toLowerCase() === 'delete') {
-        deleteBoard(boardId, board.name);
-    }
+    // Position near the button
+    const btn = event.target.closest('.board-edit-btn');
+    const rect = btn.getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.top = `${rect.bottom + 4}px`;
+    menu.style.right = `${window.innerWidth - rect.right}px`;
+    
+    document.body.appendChild(menu);
+    
+    // Close menu when clicking elsewhere
+    const closeMenu = (e) => {
+        if (!menu.contains(e.target) && e.target !== btn) {
+            menu.remove();
+            document.removeEventListener('click', closeMenu);
+        }
+    };
+    setTimeout(() => document.addEventListener('click', closeMenu), 10);
 }
 
 async function renameBoard(boardId, currentName) {
+    // Close dropdown menu
+    const menu = document.querySelector('.board-dropdown-menu');
+    if (menu) menu.remove();
+    
     const newName = prompt(`Enter new name for "${currentName}":`, currentName);
     
     if (!newName || newName.trim() === '' || newName.trim() === currentName) return;
     
     const trimmedName = newName.trim();
-    
+
     // Check if name already exists
     if (allBoards.some(b => b.name.toLowerCase() === trimmedName.toLowerCase() && b.id !== boardId)) {
         alert('A board with this name already exists.');
         return;
     }
-    
+
     try {
         // Update board name
         await db.collection('boards').doc(boardId).update({
             name: trimmedName
         });
-        
+
         // Update all recipes that have this board
         const recipesWithBoard = allRecipes.filter(r => r.boards && r.boards.includes(currentName));
         for (const recipe of recipesWithBoard) {
@@ -682,7 +718,7 @@ async function renameBoard(boardId, currentName) {
                 boards: updatedBoards
             });
         }
-        
+
         // Boards will refresh via real-time listener
     } catch (error) {
         console.error('Error renaming board:', error);
@@ -691,14 +727,18 @@ async function renameBoard(boardId, currentName) {
 }
 
 async function deleteBoard(boardId, boardName) {
-    const recipeCount = allRecipes.filter(r => r.boards && r.boards.includes(boardName)).length;
+    // Close dropdown menu
+    const menu = document.querySelector('.board-dropdown-menu');
+    if (menu) menu.remove();
     
-    const confirmMsg = recipeCount > 0 
+    const recipeCount = allRecipes.filter(r => r.boards && r.boards.includes(boardName)).length;
+
+    const confirmMsg = recipeCount > 0
         ? `Are you sure you want to delete "${boardName}"?\n\nThis board contains ${recipeCount} recipe(s). The recipes will NOT be deleted, just removed from this board.`
         : `Are you sure you want to delete "${boardName}"?`;
-    
+
     if (!confirm(confirmMsg)) return;
-    
+
     try {
         // Remove board from all recipes
         const recipesWithBoard = allRecipes.filter(r => r.boards && r.boards.includes(boardName));
@@ -708,10 +748,10 @@ async function deleteBoard(boardId, boardName) {
                 boards: updatedBoards
             });
         }
-        
+
         // Delete the board
         await db.collection('boards').doc(boardId).delete();
-        
+
         // Boards will refresh via real-time listener
     } catch (error) {
         console.error('Error deleting board:', error);
@@ -723,6 +763,8 @@ async function deleteBoard(boardId, boardName) {
 window.openCreateBoardPrompt = openCreateBoardPrompt;
 window.openBoard = openBoard;
 window.openBoardEditMenu = openBoardEditMenu;
+window.renameBoard = renameBoard;
+window.deleteBoard = deleteBoard;
 
 // Board Modal Functions
 function openBoardModal(recipe) {

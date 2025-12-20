@@ -300,6 +300,30 @@
     </div>
   </div>
 
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Confirmation Modal -->
+  <div class="modal-overlay" id="confirmModalOverlay">
+    <div class="modal confirm-modal">
+      <div class="confirm-modal-content">
+        <div class="confirm-modal-icon" id="confirmModalIcon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"></path>
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+          </svg>
+        </div>
+        <h3 class="confirm-modal-title" id="confirmModalTitle">Are you sure?</h3>
+        <p class="confirm-modal-message" id="confirmModalMessage">This action cannot be undone.</p>
+        <div class="confirm-modal-actions">
+          <button type="button" class="btn-secondary" id="confirmModalCancel">Cancel</button>
+          <button type="button" class="btn-danger" id="confirmModalConfirm">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>

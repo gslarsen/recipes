@@ -75,6 +75,16 @@ const boardsTab = document.getElementById('boardsTab');
 const boardsView = document.getElementById('boardsView');
 const boardsGrid = document.getElementById('boardsGrid');
 
+// Toast & Confirm Modal Elements
+const toastContainer = document.getElementById('toastContainer');
+const confirmModalOverlay = document.getElementById('confirmModalOverlay');
+const confirmModalTitle = document.getElementById('confirmModalTitle');
+const confirmModalMessage = document.getElementById('confirmModalMessage');
+const confirmModalCancel = document.getElementById('confirmModalCancel');
+const confirmModalConfirm = document.getElementById('confirmModalConfirm');
+const confirmModalIcon = document.getElementById('confirmModalIcon');
+let confirmCallback = null;
+
 // Initialize
 document.addEventListener('DOMContentLoaded', init);
 
@@ -140,7 +150,7 @@ async function signInWithGoogle() {
         await auth.signInWithPopup(provider);
     } catch (error) {
         console.error('Sign in error:', error);
-        alert('Failed to sign in. Please try again.');
+        showToast('Failed to sign in. Please try again.', 'error');
     }
 }
 
@@ -261,6 +271,9 @@ function setupEventListeners() {
             closeCreateModal();
             closeBoardModal();
             closeRenameBoardModal();
+            if (confirmModalOverlay.classList.contains('active')) {
+                closeConfirmModal(false);
+            }
         }
     });
 }
@@ -615,9 +628,10 @@ async function createBoard(name) {
             coverImage: null,
             createdAt: new Date().toISOString()
         });
+        showToast(`Board "${name}" created!`, 'success');
     } catch (error) {
         console.error('Error creating board:', error);
-        alert('Failed to create board: ' + error.message);
+        showToast('Failed to create board: ' + error.message, 'error');
     }
 }
 
@@ -715,14 +729,14 @@ function renameBoard(boardId, currentName) {
     // Close dropdown menu
     const menu = document.querySelector('.board-dropdown-menu');
     if (menu) menu.remove();
-    
+
     // Store info and open modal
     renamingBoardId = boardId;
     renamingBoardOldName = currentName;
     renameBoardInput.value = currentName;
     renameBoardModalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
-    
+
     // Focus and select the input
     setTimeout(() => {
         renameBoardInput.focus();
@@ -740,24 +754,24 @@ function closeRenameBoardModal() {
 
 async function confirmRenameBoardAction() {
     const newName = renameBoardInput.value.trim();
-    
+
     if (!newName || newName === renamingBoardOldName) {
         closeRenameBoardModal();
         return;
     }
-    
+
     // Check if name already exists
     if (allBoards.some(b => b.name.toLowerCase() === newName.toLowerCase() && b.id !== renamingBoardId)) {
-        alert('A board with this name already exists.');
+        showToast('A board with this name already exists.', 'warning');
         return;
     }
-    
+
     try {
         // Update board name
         await db.collection('boards').doc(renamingBoardId).update({
             name: newName
         });
-        
+
         // Update all recipes that have this board
         const recipesWithBoard = allRecipes.filter(r => r.boards && r.boards.includes(renamingBoardOldName));
         for (const recipe of recipesWithBoard) {
@@ -766,12 +780,13 @@ async function confirmRenameBoardAction() {
                 boards: updatedBoards
             });
         }
-        
+
         closeRenameBoardModal();
+        showToast('Board renamed successfully!', 'success');
         // Boards will refresh via real-time listener
     } catch (error) {
         console.error('Error renaming board:', error);
-        alert('Failed to rename board: ' + error.message);
+        showToast('Failed to rename board: ' + error.message, 'error');
     }
 }
 
@@ -779,15 +794,16 @@ async function deleteBoard(boardId, boardName) {
     // Close dropdown menu
     const menu = document.querySelector('.board-dropdown-menu');
     if (menu) menu.remove();
-
+    
     const recipeCount = allRecipes.filter(r => r.boards && r.boards.includes(boardName)).length;
-
-    const confirmMsg = recipeCount > 0
-        ? `Are you sure you want to delete "${boardName}"?\n\nThis board contains ${recipeCount} recipe(s). The recipes will NOT be deleted, just removed from this board.`
-        : `Are you sure you want to delete "${boardName}"?`;
-
-    if (!confirm(confirmMsg)) return;
-
+    
+    const confirmMsg = recipeCount > 0 
+        ? `This board contains ${recipeCount} recipe(s). The recipes will NOT be deleted, just removed from this board.`
+        : `This will permanently delete the "${boardName}" board.`;
+    
+    const confirmed = await showConfirm(`Delete "${boardName}"?`, confirmMsg, 'Delete Board');
+    if (!confirmed) return;
+    
     try {
         // Remove board from all recipes
         const recipesWithBoard = allRecipes.filter(r => r.boards && r.boards.includes(boardName));
@@ -800,11 +816,12 @@ async function deleteBoard(boardId, boardName) {
 
         // Delete the board
         await db.collection('boards').doc(boardId).delete();
-
+        
+        showToast(`Board "${boardName}" deleted.`, 'success');
         // Boards will refresh via real-time listener
     } catch (error) {
         console.error('Error deleting board:', error);
-        alert('Failed to delete board: ' + error.message);
+        showToast('Failed to delete board: ' + error.message, 'error');
     }
 }
 
@@ -887,7 +904,7 @@ async function handleCreateBoard() {
 
     // Check if board already exists
     if (allBoards.some(b => b.name.toLowerCase() === name.toLowerCase())) {
-        alert('A board with this name already exists.');
+        showToast('A board with this name already exists.', 'warning');
         return;
     }
 
@@ -910,10 +927,10 @@ async function handleCreateBoard() {
 
         // Re-render after a short delay to allow Firestore to update
         setTimeout(() => renderBoardsList(), 500);
-
+        
     } catch (error) {
         console.error('Error creating board:', error);
-        alert('Failed to create board: ' + error.message);
+        showToast('Failed to create board: ' + error.message, 'error');
     }
 }
 
@@ -942,7 +959,8 @@ async function saveRecipeToBoards() {
         }
 
         closeBoardModal();
-
+        showToast('Recipe saved to boards!', 'success');
+        
         // Refresh the recipe modal if it's still open
         if (modalOverlay.classList.contains('active')) {
             // Update the recipe in our local state
@@ -952,10 +970,10 @@ async function saveRecipeToBoards() {
                 openRecipeModal(allRecipes[recipeIndex]);
             }
         }
-
+        
     } catch (error) {
         console.error('Error saving to boards:', error);
-        alert('Failed to save to boards: ' + error.message);
+        showToast('Failed to save to boards: ' + error.message, 'error');
     }
 }
 
@@ -1093,7 +1111,11 @@ function releaseCookMode() {
 }
 
 async function confirmDeleteRecipe(recipe) {
-    const confirmed = confirm(`Are you sure you want to delete "${recipe.title}"?\n\nThis cannot be undone.`);
+    const confirmed = await showConfirm(
+        `Delete "${recipe.title}"?`,
+        'This action cannot be undone. The recipe will be permanently removed.',
+        'Delete Recipe'
+    );
 
     if (confirmed) {
         try {
@@ -1114,10 +1136,11 @@ async function confirmDeleteRecipe(recipe) {
 
             // Close modal - the recipe will disappear from the list via the real-time listener
             closeModal();
+            showToast('Recipe deleted.', 'success');
 
         } catch (error) {
             console.error('Delete error:', error);
-            alert('Failed to delete recipe: ' + error.message);
+            showToast('Failed to delete recipe: ' + error.message, 'error');
 
             // Reset button
             const deleteBtn = modalContent.querySelector('.delete-recipe-btn');
@@ -1369,6 +1392,80 @@ function applyCurrentSort() {
             break;
     }
 }
+
+// ============================================
+// TOAST NOTIFICATIONS
+// ============================================
+
+function showToast(message, type = 'info') {
+    const icons = {
+        error: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" x2="9" y1="9" y2="15"></line><line x1="9" x2="15" y1="9" y2="15"></line></svg>`,
+        success: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
+        warning: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg>`,
+        info: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="16" y2="12"></line><line x1="12" x2="12.01" y1="8" y2="8"></line></svg>`
+    };
+    
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `
+        <div class="toast-icon toast-${type}">${icons[type]}</div>
+        <div class="toast-message">${escapeHtml(message)}</div>
+        <button class="toast-close" onclick="this.parentElement.remove()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" x2="6" y1="6" y2="18"></line>
+                <line x1="6" x2="18" y1="6" y2="18"></line>
+            </svg>
+        </button>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        toast.classList.add('toast-exit');
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+
+// ============================================
+// CONFIRMATION MODAL
+// ============================================
+
+function showConfirm(title, message, confirmText = 'Delete', isDanger = true) {
+    return new Promise((resolve) => {
+        confirmModalTitle.textContent = title;
+        confirmModalMessage.textContent = message;
+        confirmModalConfirm.textContent = confirmText;
+        
+        if (isDanger) {
+            confirmModalConfirm.className = 'btn-danger';
+            confirmModalIcon.className = 'confirm-modal-icon';
+        } else {
+            confirmModalConfirm.className = 'btn-primary';
+            confirmModalIcon.className = 'confirm-modal-icon warning';
+        }
+        
+        confirmCallback = resolve;
+        confirmModalOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    });
+}
+
+function closeConfirmModal(result) {
+    confirmModalOverlay.classList.remove('active');
+    document.body.style.overflow = '';
+    if (confirmCallback) {
+        confirmCallback(result);
+        confirmCallback = null;
+    }
+}
+
+// Set up confirm modal event listeners
+confirmModalCancel.addEventListener('click', () => closeConfirmModal(false));
+confirmModalConfirm.addEventListener('click', () => closeConfirmModal(true));
+confirmModalOverlay.addEventListener('click', (e) => {
+    if (e.target === confirmModalOverlay) closeConfirmModal(false);
+});
 
 // ============================================
 // UTILITIES

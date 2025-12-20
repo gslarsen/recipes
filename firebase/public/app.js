@@ -485,15 +485,15 @@ function loadBoards() {
 function switchView(view) {
     currentView = view;
     currentBoardFilter = null;
-    
+
     // Update tabs
     recipesTab.classList.toggle('active', view === 'recipes');
     boardsTab.classList.toggle('active', view === 'boards');
-    
+
     // Show/hide views
     recipeGrid.style.display = view === 'recipes' ? 'grid' : 'none';
     boardsView.style.display = view === 'boards' ? 'block' : 'none';
-    
+
     // Update count label
     if (view === 'boards') {
         renderBoards();
@@ -515,7 +515,7 @@ function renderBoards() {
     });
 
     let boardsHtml = '';
-    
+
     // Add "Create New Board" card first (only for authorized users)
     if (currentUser && isAuthorizedUser(currentUser)) {
         boardsHtml += `
@@ -530,16 +530,16 @@ function renderBoards() {
             </div>
         `;
     }
-    
+
     // Add existing boards
     allBoards.forEach(board => {
         const count = boardCounts[board.id] || 0;
         const coverImage = board.coverImage;
-        
+
         boardsHtml += `
             <div class="board-card" onclick="openBoard('${board.id}')">
                 <div class="board-card-image">
-                    ${coverImage 
+                    ${coverImage
                         ? `<img src="${coverImage}" alt="${escapeHtml(board.name)}" loading="lazy">`
                         : `<div class="board-card-placeholder">${getPlaceholderSVGRaw()}</div>`
                     }
@@ -551,7 +551,7 @@ function renderBoards() {
             </div>
         `;
     });
-    
+
     if (allBoards.length === 0 && (!currentUser || !isAuthorizedUser(currentUser))) {
         boardsHtml = `
             <div class="loading" style="grid-column: 1 / -1;">
@@ -559,7 +559,7 @@ function renderBoards() {
             </div>
         `;
     }
-    
+
     boardsGrid.innerHTML = boardsHtml;
 }
 
@@ -586,25 +586,25 @@ async function createBoard(name) {
 function openBoard(boardId) {
     const board = allBoards.find(b => b.id === boardId);
     if (!board) return;
-    
+
     currentBoardFilter = board.name;
     currentView = 'recipes';
-    
+
     // Update tabs
     recipesTab.classList.remove('active');
     boardsTab.classList.add('active');
-    
+
     // Filter recipes by board
     filteredRecipes = allRecipes.filter(r => r.boards && r.boards.includes(board.name));
-    
+
     // Show recipe grid with back button
     boardsView.style.display = 'none';
     recipeGrid.style.display = 'grid';
-    
+
     // Add header for board view
     const existingHeader = document.querySelector('.board-view-header');
     if (existingHeader) existingHeader.remove();
-    
+
     const header = document.createElement('div');
     header.className = 'board-view-header';
     header.innerHTML = `
@@ -617,12 +617,12 @@ function openBoard(boardId) {
         <h2 class="board-view-title">${escapeHtml(board.name)}</h2>
         <span class="board-view-count">${filteredRecipes.length} ${filteredRecipes.length === 1 ? 'recipe' : 'recipes'}</span>
     `;
-    
+
     recipeGrid.parentElement.insertBefore(header, recipeGrid);
-    
+
     // Update count
     document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${filteredRecipes.length}</span> recipes in board`;
-    
+
     renderRecipes();
 }
 
@@ -634,7 +634,7 @@ window.openBoard = openBoard;
 function openBoardModal(recipe) {
     currentRecipeForBoard = recipe;
     selectedBoards = recipe.boards ? [...recipe.boards] : [];
-    
+
     renderBoardsList();
     boardModalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -657,15 +657,15 @@ function renderBoardsList() {
         `;
         return;
     }
-    
+
     boardsList.innerHTML = allBoards.map(board => {
         const isSelected = selectedBoards.includes(board.name);
         const count = allRecipes.filter(r => r.boards && r.boards.includes(board.name)).length;
-        
+
         return `
             <div class="board-list-item ${isSelected ? 'selected' : ''}" onclick="toggleBoardSelection('${escapeHtml(board.name)}')">
                 <div class="board-list-thumb">
-                    ${board.coverImage 
+                    ${board.coverImage
                         ? `<img src="${board.coverImage}" alt="${escapeHtml(board.name)}">`
                         : `<div class="board-list-thumb-placeholder">${getPlaceholderSVGRaw()}</div>`
                     }
@@ -699,33 +699,33 @@ window.toggleBoardSelection = toggleBoardSelection;
 async function handleCreateBoard() {
     const name = newBoardName.value.trim();
     if (!name) return;
-    
+
     // Check if board already exists
     if (allBoards.some(b => b.name.toLowerCase() === name.toLowerCase())) {
         alert('A board with this name already exists.');
         return;
     }
-    
+
     try {
         // Get cover image from current recipe if available
         let coverImage = null;
         if (currentRecipeForBoard) {
             coverImage = getImageUrl(currentRecipeForBoard);
         }
-        
+
         await db.collection('boards').add({
             name: name,
             coverImage: coverImage,
             createdAt: new Date().toISOString()
         });
-        
+
         // Add to selected boards
         selectedBoards.push(name);
         newBoardName.value = '';
-        
+
         // Re-render after a short delay to allow Firestore to update
         setTimeout(() => renderBoardsList(), 500);
-        
+
     } catch (error) {
         console.error('Error creating board:', error);
         alert('Failed to create board: ' + error.message);
@@ -735,35 +735,37 @@ async function handleCreateBoard() {
 async function saveRecipeToBoards() {
     if (!currentRecipeForBoard) return;
     
+    // Store references before closing modal
+    const recipeId = currentRecipeForBoard.id;
+    const recipeImage = getImageUrl(currentRecipeForBoard);
+    const boardsToSave = [...selectedBoards];
+    
     try {
         // Update recipe with selected boards
-        await db.collection('recipes').doc(currentRecipeForBoard.id).update({
-            boards: selectedBoards
+        await db.collection('recipes').doc(recipeId).update({
+            boards: boardsToSave
         });
         
         // If this is the first recipe being added to a board that has no cover image, set the cover
-        for (const boardName of selectedBoards) {
+        for (const boardName of boardsToSave) {
             const board = allBoards.find(b => b.name === boardName);
-            if (board && !board.coverImage) {
-                const coverImage = getImageUrl(currentRecipeForBoard);
-                if (coverImage) {
-                    await db.collection('boards').doc(board.id).update({
-                        coverImage: coverImage
-                    });
-                }
+            if (board && !board.coverImage && recipeImage) {
+                await db.collection('boards').doc(board.id).update({
+                    coverImage: recipeImage
+                });
             }
         }
         
         closeBoardModal();
         
-        // Refresh the modal if it's still open
+        // Refresh the recipe modal if it's still open
         if (modalOverlay.classList.contains('active')) {
             // Update the recipe in our local state
-            const recipeIndex = allRecipes.findIndex(r => r.id === currentRecipeForBoard.id);
+            const recipeIndex = allRecipes.findIndex(r => r.id === recipeId);
             if (recipeIndex > -1) {
-                allRecipes[recipeIndex].boards = selectedBoards;
+                allRecipes[recipeIndex].boards = boardsToSave;
+                openRecipeModal(allRecipes[recipeIndex]);
             }
-            openRecipeModal(allRecipes[recipeIndex]);
         }
         
     } catch (error) {
@@ -858,7 +860,7 @@ function openRecipeModal(recipe) {
     if (deleteBtn) {
         deleteBtn.addEventListener('click', () => confirmDeleteRecipe(recipe));
     }
-    
+
     // Attach add to board handler if button exists
     const addToBoardBtn = modalContent.querySelector('#addToBoardBtn');
     if (addToBoardBtn) {

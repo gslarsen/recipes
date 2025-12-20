@@ -574,6 +574,9 @@ function createRecipeDetail(recipe) {
         'Saturated Fat': 'Sat Fat'
     };
     const getNutritionLabel = (key) => nutritionLabels[key] || key;
+    
+    // Add space between number and unit (e.g., "3g" -> "3 g")
+    const formatNutritionValue = (value) => String(value).replace(/(\d)([a-zA-Z])/g, '$1 $2');
 
     const nutritionHtml = recipe.nutrition && Object.keys(recipe.nutrition).length > 0
         ? `
@@ -582,7 +585,7 @@ function createRecipeDetail(recipe) {
                 <div class="nutrition-grid">
                     ${Object.entries(recipe.nutrition).map(([key, value]) => `
                         <div class="nutrition-item">
-                            <div class="nutrition-value">${escapeHtml(String(value))}</div>
+                            <div class="nutrition-value">${escapeHtml(formatNutritionValue(value))}</div>
                             <div class="nutrition-label">${escapeHtml(getNutritionLabel(key))}</div>
                         </div>
                     `).join('')}

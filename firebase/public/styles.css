@@ -381,6 +381,34 @@ body {
     background: #fef2f2;
 }
 
+/* Rename Board Modal */
+.rename-board-modal {
+    max-width: 400px;
+    padding: var(--space-xl);
+}
+
+.rename-board-modal-content {
+    padding-top: var(--space-md);
+}
+
+.rename-board-input {
+    width: 100%;
+    padding: var(--space-md);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    border: 2px solid var(--border-light);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: var(--transition-fast);
+}
+
+.rename-board-input:focus {
+    outline: none;
+    border-color: var(--accent-warm);
+    box-shadow: 0 0 0 3px rgba(199, 91, 57, 0.1);
+}
+
 /* Create New Board Card */
 .board-card.create-board {
     border: 2px dashed var(--border-light);

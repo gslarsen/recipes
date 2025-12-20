@@ -60,6 +60,15 @@ const newBoardName = document.getElementById('newBoardName');
 const createBoardBtn = document.getElementById('createBoardBtn');
 const boardsList = document.getElementById('boardsList');
 
+// Rename Board Modal
+const renameBoardModalOverlay = document.getElementById('renameBoardModalOverlay');
+const renameBoardModalClose = document.getElementById('renameBoardModalClose');
+const cancelRenameBoard = document.getElementById('cancelRenameBoard');
+const confirmRenameBoard = document.getElementById('confirmRenameBoard');
+const renameBoardInput = document.getElementById('renameBoardInput');
+let renamingBoardId = null;
+let renamingBoardOldName = null;
+
 // View Tabs
 const recipesTab = document.getElementById('recipesTab');
 const boardsTab = document.getElementById('boardsTab');
@@ -230,6 +239,20 @@ function setupEventListeners() {
     recipesTab.addEventListener('click', () => switchView('recipes'));
     boardsTab.addEventListener('click', () => switchView('boards'));
 
+    // Rename Board Modal
+    renameBoardModalClose.addEventListener('click', closeRenameBoardModal);
+    cancelRenameBoard.addEventListener('click', closeRenameBoardModal);
+    renameBoardModalOverlay.addEventListener('click', (e) => {
+        if (e.target === renameBoardModalOverlay) closeRenameBoardModal();
+    });
+    confirmRenameBoard.addEventListener('click', confirmRenameBoardAction);
+    renameBoardInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            confirmRenameBoardAction();
+        }
+    });
+
     // Escape key to close modals
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -237,6 +260,7 @@ function setupEventListeners() {
             closeImportModal();
             closeCreateModal();
             closeBoardModal();
+            closeRenameBoardModal();
         }
     });
 }
@@ -643,11 +667,11 @@ function openBoard(boardId) {
 function openBoardEditMenu(boardId, event) {
     const board = allBoards.find(b => b.id === boardId);
     if (!board) return;
-    
+
     // Remove any existing menu
     const existingMenu = document.querySelector('.board-dropdown-menu');
     if (existingMenu) existingMenu.remove();
-    
+
     // Create dropdown menu
     const menu = document.createElement('div');
     menu.className = 'board-dropdown-menu';
@@ -667,16 +691,16 @@ function openBoardEditMenu(boardId, event) {
             Delete
         </button>
     `;
-    
+
     // Position near the button
     const btn = event.target.closest('.board-edit-btn');
     const rect = btn.getBoundingClientRect();
     menu.style.position = 'fixed';
     menu.style.top = `${rect.bottom + 4}px`;
     menu.style.right = `${window.innerWidth - rect.right}px`;
-    
+
     document.body.appendChild(menu);
-    
+
     // Close menu when clicking elsewhere
     const closeMenu = (e) => {
         if (!menu.contains(e.target) && e.target !== btn) {
@@ -687,38 +711,63 @@ function openBoardEditMenu(boardId, event) {
     setTimeout(() => document.addEventListener('click', closeMenu), 10);
 }
 
-async function renameBoard(boardId, currentName) {
+function renameBoard(boardId, currentName) {
     // Close dropdown menu
     const menu = document.querySelector('.board-dropdown-menu');
     if (menu) menu.remove();
     
-    const newName = prompt(`Enter new name for "${currentName}":`, currentName);
+    // Store info and open modal
+    renamingBoardId = boardId;
+    renamingBoardOldName = currentName;
+    renameBoardInput.value = currentName;
+    renameBoardModalOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
     
-    if (!newName || newName.trim() === '' || newName.trim() === currentName) return;
-    
-    const trimmedName = newName.trim();
+    // Focus and select the input
+    setTimeout(() => {
+        renameBoardInput.focus();
+        renameBoardInput.select();
+    }, 100);
+}
 
+function closeRenameBoardModal() {
+    renameBoardModalOverlay.classList.remove('active');
+    document.body.style.overflow = '';
+    renamingBoardId = null;
+    renamingBoardOldName = null;
+    renameBoardInput.value = '';
+}
+
+async function confirmRenameBoardAction() {
+    const newName = renameBoardInput.value.trim();
+    
+    if (!newName || newName === renamingBoardOldName) {
+        closeRenameBoardModal();
+        return;
+    }
+    
     // Check if name already exists
-    if (allBoards.some(b => b.name.toLowerCase() === trimmedName.toLowerCase() && b.id !== boardId)) {
+    if (allBoards.some(b => b.name.toLowerCase() === newName.toLowerCase() && b.id !== renamingBoardId)) {
         alert('A board with this name already exists.');
         return;
     }
-
+    
     try {
         // Update board name
-        await db.collection('boards').doc(boardId).update({
-            name: trimmedName
+        await db.collection('boards').doc(renamingBoardId).update({
+            name: newName
         });
-
+        
         // Update all recipes that have this board
-        const recipesWithBoard = allRecipes.filter(r => r.boards && r.boards.includes(currentName));
+        const recipesWithBoard = allRecipes.filter(r => r.boards && r.boards.includes(renamingBoardOldName));
         for (const recipe of recipesWithBoard) {
-            const updatedBoards = recipe.boards.map(b => b === currentName ? trimmedName : b);
+            const updatedBoards = recipe.boards.map(b => b === renamingBoardOldName ? newName : b);
             await db.collection('recipes').doc(recipe.id).update({
                 boards: updatedBoards
             });
         }
-
+        
+        closeRenameBoardModal();
         // Boards will refresh via real-time listener
     } catch (error) {
         console.error('Error renaming board:', error);
@@ -730,7 +779,7 @@ async function deleteBoard(boardId, boardName) {
     // Close dropdown menu
     const menu = document.querySelector('.board-dropdown-menu');
     if (menu) menu.remove();
-    
+
     const recipeCount = allRecipes.filter(r => r.boards && r.boards.includes(boardName)).length;
 
     const confirmMsg = recipeCount > 0

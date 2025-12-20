@@ -60,12 +60,14 @@ const newBoardName = document.getElementById('newBoardName');
 const createBoardBtn = document.getElementById('createBoardBtn');
 const boardsList = document.getElementById('boardsList');
 
-// Rename Board Modal
-const renameBoardModalOverlay = document.getElementById('renameBoardModalOverlay');
-const renameBoardModalClose = document.getElementById('renameBoardModalClose');
-const cancelRenameBoard = document.getElementById('cancelRenameBoard');
-const confirmRenameBoard = document.getElementById('confirmRenameBoard');
-const renameBoardInput = document.getElementById('renameBoardInput');
+// Board Name Modal (Create/Rename)
+const boardNameModalOverlay = document.getElementById('boardNameModalOverlay');
+const boardNameModalClose = document.getElementById('boardNameModalClose');
+const boardNameModalTitle = document.getElementById('boardNameModalTitle');
+const cancelBoardName = document.getElementById('cancelBoardName');
+const confirmBoardName = document.getElementById('confirmBoardName');
+const boardNameInput = document.getElementById('boardNameInput');
+let boardNameMode = 'create'; // 'create' or 'rename'
 let renamingBoardId = null;
 let renamingBoardOldName = null;
 
@@ -249,17 +251,17 @@ function setupEventListeners() {
     recipesTab.addEventListener('click', () => switchView('recipes'));
     boardsTab.addEventListener('click', () => switchView('boards'));
 
-    // Rename Board Modal
-    renameBoardModalClose.addEventListener('click', closeRenameBoardModal);
-    cancelRenameBoard.addEventListener('click', closeRenameBoardModal);
-    renameBoardModalOverlay.addEventListener('click', (e) => {
-        if (e.target === renameBoardModalOverlay) closeRenameBoardModal();
+    // Board Name Modal (Create/Rename)
+    boardNameModalClose.addEventListener('click', closeBoardNameModal);
+    cancelBoardName.addEventListener('click', closeBoardNameModal);
+    boardNameModalOverlay.addEventListener('click', (e) => {
+        if (e.target === boardNameModalOverlay) closeBoardNameModal();
     });
-    confirmRenameBoard.addEventListener('click', confirmRenameBoardAction);
-    renameBoardInput.addEventListener('keypress', (e) => {
+    confirmBoardName.addEventListener('click', confirmBoardNameAction);
+    boardNameInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            confirmRenameBoardAction();
+            confirmBoardNameAction();
         }
     });
 
@@ -270,7 +272,7 @@ function setupEventListeners() {
             closeImportModal();
             closeCreateModal();
             closeBoardModal();
-            closeRenameBoardModal();
+            closeBoardNameModal();
             if (confirmModalOverlay.classList.contains('active')) {
                 closeConfirmModal(false);
             }
@@ -615,10 +617,14 @@ function renderBoards() {
 }
 
 function openCreateBoardPrompt() {
-    const name = prompt('Enter board name:');
-    if (name && name.trim()) {
-        createBoard(name.trim());
-    }
+    boardNameMode = 'create';
+    boardNameModalTitle.textContent = 'New Board';
+    confirmBoardName.textContent = 'Create';
+    boardNameInput.value = '';
+    boardNameModalOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    setTimeout(() => boardNameInput.focus(), 100);
 }
 
 async function createBoard(name) {
@@ -729,64 +735,83 @@ function renameBoard(boardId, currentName) {
     // Close dropdown menu
     const menu = document.querySelector('.board-dropdown-menu');
     if (menu) menu.remove();
-
-    // Store info and open modal
+    
+    // Store info and open modal in rename mode
+    boardNameMode = 'rename';
     renamingBoardId = boardId;
     renamingBoardOldName = currentName;
-    renameBoardInput.value = currentName;
-    renameBoardModalOverlay.classList.add('active');
+    boardNameModalTitle.textContent = 'Rename Board';
+    confirmBoardName.textContent = 'Save';
+    boardNameInput.value = currentName;
+    boardNameModalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
-
+    
     // Focus and select the input
     setTimeout(() => {
-        renameBoardInput.focus();
-        renameBoardInput.select();
+        boardNameInput.focus();
+        boardNameInput.select();
     }, 100);
 }
 
-function closeRenameBoardModal() {
-    renameBoardModalOverlay.classList.remove('active');
+function closeBoardNameModal() {
+    boardNameModalOverlay.classList.remove('active');
     document.body.style.overflow = '';
     renamingBoardId = null;
     renamingBoardOldName = null;
-    renameBoardInput.value = '';
+    boardNameInput.value = '';
 }
 
-async function confirmRenameBoardAction() {
-    const newName = renameBoardInput.value.trim();
-
-    if (!newName || newName === renamingBoardOldName) {
-        closeRenameBoardModal();
+async function confirmBoardNameAction() {
+    const name = boardNameInput.value.trim();
+    
+    if (!name) {
+        closeBoardNameModal();
         return;
     }
-
-    // Check if name already exists
-    if (allBoards.some(b => b.name.toLowerCase() === newName.toLowerCase() && b.id !== renamingBoardId)) {
-        showToast('A board with this name already exists.', 'warning');
-        return;
-    }
-
-    try {
-        // Update board name
-        await db.collection('boards').doc(renamingBoardId).update({
-            name: newName
-        });
-
-        // Update all recipes that have this board
-        const recipesWithBoard = allRecipes.filter(r => r.boards && r.boards.includes(renamingBoardOldName));
-        for (const recipe of recipesWithBoard) {
-            const updatedBoards = recipe.boards.map(b => b === renamingBoardOldName ? newName : b);
-            await db.collection('recipes').doc(recipe.id).update({
-                boards: updatedBoards
-            });
+    
+    if (boardNameMode === 'create') {
+        // Check if name already exists
+        if (allBoards.some(b => b.name.toLowerCase() === name.toLowerCase())) {
+            showToast('A board with this name already exists.', 'warning');
+            return;
         }
-
-        closeRenameBoardModal();
-        showToast('Board renamed successfully!', 'success');
-        // Boards will refresh via real-time listener
-    } catch (error) {
-        console.error('Error renaming board:', error);
-        showToast('Failed to rename board: ' + error.message, 'error');
+        
+        closeBoardNameModal();
+        await createBoard(name);
+    } else {
+        // Rename mode
+        if (name === renamingBoardOldName) {
+            closeBoardNameModal();
+            return;
+        }
+        
+        // Check if name already exists
+        if (allBoards.some(b => b.name.toLowerCase() === name.toLowerCase() && b.id !== renamingBoardId)) {
+            showToast('A board with this name already exists.', 'warning');
+            return;
+        }
+        
+        try {
+            // Update board name
+            await db.collection('boards').doc(renamingBoardId).update({
+                name: name
+            });
+            
+            // Update all recipes that have this board
+            const recipesWithBoard = allRecipes.filter(r => r.boards && r.boards.includes(renamingBoardOldName));
+            for (const recipe of recipesWithBoard) {
+                const updatedBoards = recipe.boards.map(b => b === renamingBoardOldName ? name : b);
+                await db.collection('recipes').doc(recipe.id).update({
+                    boards: updatedBoards
+                });
+            }
+            
+            closeBoardNameModal();
+            showToast('Board renamed successfully!', 'success');
+        } catch (error) {
+            console.error('Error renaming board:', error);
+            showToast('Failed to rename board: ' + error.message, 'error');
+        }
     }
 }
 
@@ -794,16 +819,16 @@ async function deleteBoard(boardId, boardName) {
     // Close dropdown menu
     const menu = document.querySelector('.board-dropdown-menu');
     if (menu) menu.remove();
-    
+
     const recipeCount = allRecipes.filter(r => r.boards && r.boards.includes(boardName)).length;
-    
-    const confirmMsg = recipeCount > 0 
+
+    const confirmMsg = recipeCount > 0
         ? `This board contains ${recipeCount} recipe(s). The recipes will NOT be deleted, just removed from this board.`
         : `This will permanently delete the "${boardName}" board.`;
-    
+
     const confirmed = await showConfirm(`Delete "${boardName}"?`, confirmMsg, 'Delete Board');
     if (!confirmed) return;
-    
+
     try {
         // Remove board from all recipes
         const recipesWithBoard = allRecipes.filter(r => r.boards && r.boards.includes(boardName));
@@ -816,7 +841,7 @@ async function deleteBoard(boardId, boardName) {
 
         // Delete the board
         await db.collection('boards').doc(boardId).delete();
-        
+
         showToast(`Board "${boardName}" deleted.`, 'success');
         // Boards will refresh via real-time listener
     } catch (error) {
@@ -927,7 +952,7 @@ async function handleCreateBoard() {
 
         // Re-render after a short delay to allow Firestore to update
         setTimeout(() => renderBoardsList(), 500);
-        
+
     } catch (error) {
         console.error('Error creating board:', error);
         showToast('Failed to create board: ' + error.message, 'error');
@@ -960,7 +985,7 @@ async function saveRecipeToBoards() {
 
         closeBoardModal();
         showToast('Recipe saved to boards!', 'success');
-        
+
         // Refresh the recipe modal if it's still open
         if (modalOverlay.classList.contains('active')) {
             // Update the recipe in our local state
@@ -970,7 +995,7 @@ async function saveRecipeToBoards() {
                 openRecipeModal(allRecipes[recipeIndex]);
             }
         }
-        
+
     } catch (error) {
         console.error('Error saving to boards:', error);
         showToast('Failed to save to boards: ' + error.message, 'error');
@@ -1404,7 +1429,7 @@ function showToast(message, type = 'info') {
         warning: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg>`,
         info: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="16" y2="12"></line><line x1="12" x2="12.01" y1="8" y2="8"></line></svg>`
     };
-    
+
     const toast = document.createElement('div');
     toast.className = 'toast';
     toast.innerHTML = `
@@ -1417,9 +1442,9 @@ function showToast(message, type = 'info') {
             </svg>
         </button>
     `;
-    
+
     toastContainer.appendChild(toast);
-    
+
     // Auto-remove after 5 seconds
     setTimeout(() => {
         toast.classList.add('toast-exit');
@@ -1436,7 +1461,7 @@ function showConfirm(title, message, confirmText = 'Delete', isDanger = true) {
         confirmModalTitle.textContent = title;
         confirmModalMessage.textContent = message;
         confirmModalConfirm.textContent = confirmText;
-        
+
         if (isDanger) {
             confirmModalConfirm.className = 'btn-danger';
             confirmModalIcon.className = 'confirm-modal-icon';
@@ -1444,7 +1469,7 @@ function showConfirm(title, message, confirmText = 'Delete', isDanger = true) {
             confirmModalConfirm.className = 'btn-primary';
             confirmModalIcon.className = 'confirm-modal-icon warning';
         }
-        
+
         confirmCallback = resolve;
         confirmModalOverlay.classList.add('active');
         document.body.style.overflow = 'hidden';

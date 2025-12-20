@@ -381,17 +381,17 @@ body {
     background: #fef2f2;
 }
 
-/* Rename Board Modal */
-.rename-board-modal {
+/* Board Name Modal (Create/Rename) */
+.board-name-modal {
     max-width: 400px;
     padding: var(--space-xl);
 }
 
-.rename-board-modal-content {
+.board-name-modal-content {
     padding-top: var(--space-md);
 }
 
-.rename-board-input {
+.board-name-input {
     width: 100%;
     padding: var(--space-md);
     font-family: var(--font-body);
@@ -403,7 +403,7 @@ body {
     transition: var(--transition-fast);
 }
 
-.rename-board-input:focus {
+.board-name-input:focus {
     outline: none;
     border-color: var(--accent-warm);
     box-shadow: 0 0 0 3px rgba(199, 91, 57, 0.1);
@@ -593,7 +593,7 @@ body {
         right: var(--space-md);
         left: var(--space-md);
     }
-    
+
     .toast {
         max-width: 100%;
     }

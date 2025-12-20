@@ -8,7 +8,13 @@ let allRecipes = [];
 let filteredRecipes = [];
 let currentUser = null;
 let unsubscribeRecipes = null;
+let unsubscribeBoards = null;
 let wakeLock = null;
+let allBoards = [];
+let currentView = 'recipes'; // 'recipes' or 'boards'
+let currentBoardFilter = null; // null means show all recipes
+let currentRecipeForBoard = null; // Recipe being added to board
+let selectedBoards = []; // Boards selected in the modal
 
 // Check if device supports wake lock and is touch-enabled
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -45,6 +51,21 @@ const recipePhoto = document.getElementById('recipePhoto');
 const photoPreview = document.getElementById('photoPreview');
 const photoPlaceholder = document.getElementById('photoPlaceholder');
 
+// Board Modal
+const boardModalOverlay = document.getElementById('boardModalOverlay');
+const boardModalClose = document.getElementById('boardModalClose');
+const cancelBoard = document.getElementById('cancelBoard');
+const saveBoardSelection = document.getElementById('saveBoardSelection');
+const newBoardName = document.getElementById('newBoardName');
+const createBoardBtn = document.getElementById('createBoardBtn');
+const boardsList = document.getElementById('boardsList');
+
+// View Tabs
+const recipesTab = document.getElementById('recipesTab');
+const boardsTab = document.getElementById('boardsTab');
+const boardsView = document.getElementById('boardsView');
+const boardsGrid = document.getElementById('boardsGrid');
+
 // Initialize
 document.addEventListener('DOMContentLoaded', init);
 
@@ -53,6 +74,7 @@ function init() {
     setupAuth();
     setupEventListeners();
     loadRecipes();
+    loadBoards();
 }
 
 // ============================================
@@ -189,12 +211,32 @@ function setupEventListeners() {
     photoUploadArea.addEventListener('click', () => recipePhoto.click());
     recipePhoto.addEventListener('change', handlePhotoSelect);
 
+    // Board Modal
+    boardModalClose.addEventListener('click', closeBoardModal);
+    cancelBoard.addEventListener('click', closeBoardModal);
+    boardModalOverlay.addEventListener('click', (e) => {
+        if (e.target === boardModalOverlay) closeBoardModal();
+    });
+    saveBoardSelection.addEventListener('click', saveRecipeToBoards);
+    createBoardBtn.addEventListener('click', handleCreateBoard);
+    newBoardName.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleCreateBoard();
+        }
+    });
+
+    // View Tabs
+    recipesTab.addEventListener('click', () => switchView('recipes'));
+    boardsTab.addEventListener('click', () => switchView('boards'));
+
     // Escape key to close modals
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeModal();
             closeImportModal();
             closeCreateModal();
+            closeBoardModal();
         }
     });
 }
@@ -420,6 +462,317 @@ function hideCreateError() {
 }
 
 // ============================================
+// BOARDS
+// ============================================
+
+function loadBoards() {
+    // Real-time listener for boards
+    unsubscribeBoards = db.collection('boards')
+        .orderBy('createdAt', 'desc')
+        .onSnapshot((snapshot) => {
+            allBoards = [];
+            snapshot.forEach((doc) => {
+                allBoards.push({ id: doc.id, ...doc.data() });
+            });
+            if (currentView === 'boards') {
+                renderBoards();
+            }
+        }, (error) => {
+            console.error('Error loading boards:', error);
+        });
+}
+
+function switchView(view) {
+    currentView = view;
+    currentBoardFilter = null;
+    
+    // Update tabs
+    recipesTab.classList.toggle('active', view === 'recipes');
+    boardsTab.classList.toggle('active', view === 'boards');
+    
+    // Show/hide views
+    recipeGrid.style.display = view === 'recipes' ? 'grid' : 'none';
+    boardsView.style.display = view === 'boards' ? 'block' : 'none';
+    
+    // Update count label
+    if (view === 'boards') {
+        renderBoards();
+        recipeCount.textContent = allBoards.length;
+        document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${allBoards.length}</span> boards`;
+    } else {
+        filteredRecipes = [...allRecipes];
+        applyCurrentSort();
+        renderRecipes();
+        document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${filteredRecipes.length}</span> recipes`;
+    }
+}
+
+function renderBoards() {
+    // Calculate recipe counts for each board
+    const boardCounts = {};
+    allBoards.forEach(board => {
+        boardCounts[board.id] = allRecipes.filter(r => r.boards && r.boards.includes(board.name)).length;
+    });
+
+    let boardsHtml = '';
+    
+    // Add "Create New Board" card first (only for authorized users)
+    if (currentUser && isAuthorizedUser(currentUser)) {
+        boardsHtml += `
+            <div class="board-card create-board" onclick="openCreateBoardPrompt()">
+                <div class="create-board-content">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 5v14"></path>
+                        <path d="M5 12h14"></path>
+                    </svg>
+                    <span>New Board</span>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Add existing boards
+    allBoards.forEach(board => {
+        const count = boardCounts[board.id] || 0;
+        const coverImage = board.coverImage;
+        
+        boardsHtml += `
+            <div class="board-card" onclick="openBoard('${board.id}')">
+                <div class="board-card-image">
+                    ${coverImage 
+                        ? `<img src="${coverImage}" alt="${escapeHtml(board.name)}" loading="lazy">`
+                        : `<div class="board-card-placeholder">${getPlaceholderSVGRaw()}</div>`
+                    }
+                </div>
+                <div class="board-card-overlay">
+                    <div class="board-card-name">${escapeHtml(board.name)}</div>
+                    <div class="board-card-count">${count} ${count === 1 ? 'item' : 'items'}</div>
+                </div>
+            </div>
+        `;
+    });
+    
+    if (allBoards.length === 0 && (!currentUser || !isAuthorizedUser(currentUser))) {
+        boardsHtml = `
+            <div class="loading" style="grid-column: 1 / -1;">
+                <p>No boards yet.</p>
+            </div>
+        `;
+    }
+    
+    boardsGrid.innerHTML = boardsHtml;
+}
+
+function openCreateBoardPrompt() {
+    const name = prompt('Enter board name:');
+    if (name && name.trim()) {
+        createBoard(name.trim());
+    }
+}
+
+async function createBoard(name) {
+    try {
+        await db.collection('boards').add({
+            name: name,
+            coverImage: null,
+            createdAt: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error creating board:', error);
+        alert('Failed to create board: ' + error.message);
+    }
+}
+
+function openBoard(boardId) {
+    const board = allBoards.find(b => b.id === boardId);
+    if (!board) return;
+    
+    currentBoardFilter = board.name;
+    currentView = 'recipes';
+    
+    // Update tabs
+    recipesTab.classList.remove('active');
+    boardsTab.classList.add('active');
+    
+    // Filter recipes by board
+    filteredRecipes = allRecipes.filter(r => r.boards && r.boards.includes(board.name));
+    
+    // Show recipe grid with back button
+    boardsView.style.display = 'none';
+    recipeGrid.style.display = 'grid';
+    
+    // Add header for board view
+    const existingHeader = document.querySelector('.board-view-header');
+    if (existingHeader) existingHeader.remove();
+    
+    const header = document.createElement('div');
+    header.className = 'board-view-header';
+    header.innerHTML = `
+        <button class="back-to-boards" onclick="switchView('boards')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6"></path>
+            </svg>
+            Back
+        </button>
+        <h2 class="board-view-title">${escapeHtml(board.name)}</h2>
+        <span class="board-view-count">${filteredRecipes.length} ${filteredRecipes.length === 1 ? 'recipe' : 'recipes'}</span>
+    `;
+    
+    recipeGrid.parentElement.insertBefore(header, recipeGrid);
+    
+    // Update count
+    document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${filteredRecipes.length}</span> recipes in board`;
+    
+    renderRecipes();
+}
+
+// Make functions available globally
+window.openCreateBoardPrompt = openCreateBoardPrompt;
+window.openBoard = openBoard;
+
+// Board Modal Functions
+function openBoardModal(recipe) {
+    currentRecipeForBoard = recipe;
+    selectedBoards = recipe.boards ? [...recipe.boards] : [];
+    
+    renderBoardsList();
+    boardModalOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeBoardModal() {
+    boardModalOverlay.classList.remove('active');
+    document.body.style.overflow = '';
+    currentRecipeForBoard = null;
+    selectedBoards = [];
+    newBoardName.value = '';
+}
+
+function renderBoardsList() {
+    if (allBoards.length === 0) {
+        boardsList.innerHTML = `
+            <div class="boards-list-empty">
+                No boards yet. Create one above!
+            </div>
+        `;
+        return;
+    }
+    
+    boardsList.innerHTML = allBoards.map(board => {
+        const isSelected = selectedBoards.includes(board.name);
+        const count = allRecipes.filter(r => r.boards && r.boards.includes(board.name)).length;
+        
+        return `
+            <div class="board-list-item ${isSelected ? 'selected' : ''}" onclick="toggleBoardSelection('${escapeHtml(board.name)}')">
+                <div class="board-list-thumb">
+                    ${board.coverImage 
+                        ? `<img src="${board.coverImage}" alt="${escapeHtml(board.name)}">`
+                        : `<div class="board-list-thumb-placeholder">${getPlaceholderSVGRaw()}</div>`
+                    }
+                </div>
+                <div class="board-list-info">
+                    <div class="board-list-name">${escapeHtml(board.name)}</div>
+                    <div class="board-list-count">${count} ${count === 1 ? 'item' : 'items'}</div>
+                </div>
+                <div class="board-list-check">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function toggleBoardSelection(boardName) {
+    const index = selectedBoards.indexOf(boardName);
+    if (index > -1) {
+        selectedBoards.splice(index, 1);
+    } else {
+        selectedBoards.push(boardName);
+    }
+    renderBoardsList();
+}
+
+window.toggleBoardSelection = toggleBoardSelection;
+
+async function handleCreateBoard() {
+    const name = newBoardName.value.trim();
+    if (!name) return;
+    
+    // Check if board already exists
+    if (allBoards.some(b => b.name.toLowerCase() === name.toLowerCase())) {
+        alert('A board with this name already exists.');
+        return;
+    }
+    
+    try {
+        // Get cover image from current recipe if available
+        let coverImage = null;
+        if (currentRecipeForBoard) {
+            coverImage = getImageUrl(currentRecipeForBoard);
+        }
+        
+        await db.collection('boards').add({
+            name: name,
+            coverImage: coverImage,
+            createdAt: new Date().toISOString()
+        });
+        
+        // Add to selected boards
+        selectedBoards.push(name);
+        newBoardName.value = '';
+        
+        // Re-render after a short delay to allow Firestore to update
+        setTimeout(() => renderBoardsList(), 500);
+        
+    } catch (error) {
+        console.error('Error creating board:', error);
+        alert('Failed to create board: ' + error.message);
+    }
+}
+
+async function saveRecipeToBoards() {
+    if (!currentRecipeForBoard) return;
+    
+    try {
+        // Update recipe with selected boards
+        await db.collection('recipes').doc(currentRecipeForBoard.id).update({
+            boards: selectedBoards
+        });
+        
+        // If this is the first recipe being added to a board that has no cover image, set the cover
+        for (const boardName of selectedBoards) {
+            const board = allBoards.find(b => b.name === boardName);
+            if (board && !board.coverImage) {
+                const coverImage = getImageUrl(currentRecipeForBoard);
+                if (coverImage) {
+                    await db.collection('boards').doc(board.id).update({
+                        coverImage: coverImage
+                    });
+                }
+            }
+        }
+        
+        closeBoardModal();
+        
+        // Refresh the modal if it's still open
+        if (modalOverlay.classList.contains('active')) {
+            // Update the recipe in our local state
+            const recipeIndex = allRecipes.findIndex(r => r.id === currentRecipeForBoard.id);
+            if (recipeIndex > -1) {
+                allRecipes[recipeIndex].boards = selectedBoards;
+            }
+            openRecipeModal(allRecipes[recipeIndex]);
+        }
+        
+    } catch (error) {
+        console.error('Error saving to boards:', error);
+        alert('Failed to save to boards: ' + error.message);
+    }
+}
+
+// ============================================
 // RENDER RECIPES
 // ============================================
 
@@ -504,6 +857,12 @@ function openRecipeModal(recipe) {
     const deleteBtn = modalContent.querySelector('.delete-recipe-btn');
     if (deleteBtn) {
         deleteBtn.addEventListener('click', () => confirmDeleteRecipe(recipe));
+    }
+    
+    // Attach add to board handler if button exists
+    const addToBoardBtn = modalContent.querySelector('#addToBoardBtn');
+    if (addToBoardBtn) {
+        addToBoardBtn.addEventListener('click', () => openBoardModal(recipe));
     }
 }
 
@@ -701,14 +1060,36 @@ function createRecipeDetail(recipe) {
                             </div>
                         ` : ''}
                     </div>
-                    <button class="print-button" onclick="window.print()">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                            <rect width="12" height="8" x="6" y="14"></rect>
-                        </svg>
-                        Print Recipe
-                    </button>
+                    <div class="recipe-header-actions">
+                        <button class="print-button" onclick="window.print()">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                <rect width="12" height="8" x="6" y="14"></rect>
+                            </svg>
+                            Print Recipe
+                        </button>
+                        ${currentUser && isAuthorizedUser(currentUser) ? `
+                        <button class="add-to-board-btn" id="addToBoardBtn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            Add to Board
+                        </button>
+                        ` : ''}
+                    </div>
+                    ${recipe.boards && recipe.boards.length > 0 ? `
+                    <div class="recipe-boards-tags">
+                        ${recipe.boards.map(boardName => `
+                            <span class="board-tag">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                                ${escapeHtml(boardName)}
+                            </span>
+                        `).join('')}
+                    </div>
+                    ` : ''}
                     ${(isTouchDevice && supportsWakeLock) ? `
                     <div class="cook-mode">
                         <label class="cook-mode-toggle">

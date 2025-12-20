@@ -13,6 +13,16 @@ service cloud.firestore {
         && request.auth.token.email in ['glarsen8172@gmail.com', 'pkglines@gmail.com'];
     }
 
+    // Boards collection
+    match /boards/{boardId} {
+      // Anyone can read boards
+      allow read: if true;
+
+      // Only authenticated users can create/update/delete
+      allow create, update, delete: if request.auth != null
+        && request.auth.token.email in ['glarsen8172@gmail.com', 'pkglines@gmail.com'];
+    }
+
     // User preferences (if needed later)
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;

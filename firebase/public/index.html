@@ -63,8 +63,35 @@
   </header>
 
   <main class="main-content">
+    <!-- View Tabs -->
+    <div class="view-tabs">
+      <button class="view-tab active" data-view="recipes" id="recipesTab">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="7" height="7" x="3" y="3" rx="1"></rect>
+          <rect width="7" height="7" x="14" y="3" rx="1"></rect>
+          <rect width="7" height="7" x="14" y="14" rx="1"></rect>
+          <rect width="7" height="7" x="3" y="14" rx="1"></rect>
+        </svg>
+        All Recipes
+      </button>
+      <button class="view-tab" data-view="boards" id="boardsTab">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+        </svg>
+        My Boards
+      </button>
+    </div>
+
+    <!-- Recipes View -->
     <div class="recipe-grid" id="recipeGrid">
       <!-- Recipe cards will be inserted here -->
+    </div>
+
+    <!-- Boards View -->
+    <div class="boards-view" id="boardsView" style="display: none;">
+      <div class="boards-grid" id="boardsGrid">
+        <!-- Board cards will be inserted here -->
+      </div>
     </div>
   </main>
 
@@ -118,6 +145,46 @@
           </div>
         </form>
         <div id="importError" class="error-message" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add to Board Modal -->
+  <div class="modal-overlay" id="boardModalOverlay">
+    <div class="modal board-modal">
+      <button class="modal-close" id="boardModalClose" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"></path>
+          <path d="m6 6 12 12"></path>
+        </svg>
+      </button>
+      <div class="board-modal-content">
+        <h2 class="modal-title">Add to Board</h2>
+        <p class="modal-description">Select a board or create a new one.</p>
+        
+        <!-- New Board Input -->
+        <div class="new-board-row">
+          <input type="text" id="newBoardName" placeholder="New board name..." class="new-board-input">
+          <button type="button" class="btn-create-board" id="createBoardBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 5v14"></path>
+              <path d="M5 12h14"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Existing Boards List -->
+        <div class="boards-list" id="boardsList">
+          <!-- Board items will be inserted here -->
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" id="cancelBoard">Cancel</button>
+          <button type="button" class="btn-primary" id="saveBoardSelection">
+            <span class="btn-text">Done</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

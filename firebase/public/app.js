@@ -8,6 +8,11 @@ let allRecipes = [];
 let filteredRecipes = [];
 let currentUser = null;
 let unsubscribeRecipes = null;
+let wakeLock = null;
+
+// Check if device supports wake lock and is touch-enabled
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+const supportsWakeLock = 'wakeLock' in navigator;
 
 // DOM Elements
 const recipeGrid = document.getElementById('recipeGrid');
@@ -505,6 +510,40 @@ function openRecipeModal(recipe) {
 function closeModal() {
     modalOverlay.classList.remove('active');
     document.body.style.overflow = '';
+    // Release wake lock when closing modal
+    releaseCookMode();
+}
+
+// Cook Mode - Screen Wake Lock
+async function toggleCookMode(enabled) {
+    if (enabled) {
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Cook Mode: Screen wake lock acquired');
+            
+            // Re-acquire wake lock if page becomes visible again
+            wakeLock.addEventListener('release', () => {
+                console.log('Cook Mode: Screen wake lock released');
+            });
+        } catch (err) {
+            console.error('Cook Mode failed:', err);
+            // Uncheck the toggle if it failed
+            const toggle = document.getElementById('cookModeToggle');
+            if (toggle) toggle.checked = false;
+        }
+    } else {
+        releaseCookMode();
+    }
+}
+
+function releaseCookMode() {
+    if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+    }
+    // Reset toggle state
+    const toggle = document.getElementById('cookModeToggle');
+    if (toggle) toggle.checked = false;
 }
 
 async function confirmDeleteRecipe(recipe) {
@@ -670,6 +709,15 @@ function createRecipeDetail(recipe) {
                         </svg>
                         Print Recipe
                     </button>
+                    ${(isTouchDevice && supportsWakeLock) ? `
+                    <div class="cook-mode">
+                        <label class="cook-mode-toggle">
+                            <input type="checkbox" id="cookModeToggle" onchange="toggleCookMode(this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="cook-mode-label">Cook Mode <span class="cook-mode-hint">(Keep screen awake)</span></span>
+                    </div>
+                    ` : ''}
                 </header>
 
                 <div class="recipe-content">

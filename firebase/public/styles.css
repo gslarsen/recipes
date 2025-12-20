@@ -781,6 +781,74 @@ body {
     flex-shrink: 0;
 }
 
+/* Cook Mode Toggle */
+.cook-mode {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+    padding: var(--space-sm) 0;
+}
+
+.cook-mode-toggle {
+    position: relative;
+    width: 52px;
+    height: 28px;
+    flex-shrink: 0;
+}
+
+.cook-mode-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--border-light);
+    transition: var(--transition-fast);
+    border-radius: 28px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: var(--transition-fast);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.cook-mode-toggle input:checked + .toggle-slider {
+    background-color: #2ecc71;
+}
+
+.cook-mode-toggle input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+}
+
+.cook-mode-label {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.cook-mode-hint {
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
 /* Delete Recipe Button Container */
 .delete-recipe-container {
     display: flex;
@@ -837,6 +905,7 @@ body {
     .main-content,
     .modal-close,
     .print-button,
+    .cook-mode,
     .recipe-source,
     .delete-recipe-btn {
         display: none !important;

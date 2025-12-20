@@ -313,6 +313,36 @@ body {
     opacity: 0.4;
 }
 
+/* Board Edit Button */
+.board-edit-btn {
+    position: absolute;
+    top: var(--space-sm);
+    right: var(--space-sm);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: var(--transition-fast);
+    z-index: 5;
+}
+
+.board-card:hover .board-edit-btn {
+    opacity: 1;
+}
+
+.board-edit-btn:hover {
+    background: white;
+    color: var(--accent-warm);
+    transform: scale(1.1);
+}
+
 /* Create New Board Card */
 .board-card.create-board {
     border: 2px dashed var(--border-light);

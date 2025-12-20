@@ -1,192 +1,207 @@
-# Food Network Recipe Scraper
+# Pam's Recipe Collection
 
-A Python tool to backup your favorite recipes from Food Network. Export recipes to JSON and Markdown formats for offline access.
+A personal recipe management system with a beautiful web interface and cloud backend.
+
+---
+
+## I. Recipe Collection Web App
+
+A modern, responsive web application for browsing, searching, and managing a personal recipe collection. Built with Firebase for real-time data sync and secure authentication.
+
+### 🌐 Live Site
+
+**[pams-recipes.web.app](https://pams-recipes.web.app)**
+
+### Features
+
+- 🍳 **Browse 310+ recipes** with beautiful card-based UI
+- 🔍 **Search** across titles, authors, and ingredients
+- 📱 **Responsive design** - works great on desktop, tablet, and mobile
+- ➕ **Add recipes** three ways:
+  - **Create Personal Recipe** - manual entry with photo upload
+  - **Import from Web** - paste a URL from most recipe sites
+  - **Bookmarklet** - save recipes from protected sites (Food Network, America's Test Kitchen) directly from your browser
+- 🗑️ **Delete recipes** you no longer want
+- 🔐 **Secure** - Google sign-in required to add/edit/delete; anyone can view
+- 🖨️ **Print-friendly** recipe detail view
+
+### Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Frontend | Vanilla HTML/CSS/JS |
+| Database | Firebase Firestore |
+| Images | Firebase Cloud Storage |
+| Hosting | Firebase Hosting |
+| Auth | Firebase Authentication (Google) |
+
+### Adding Recipes
+
+#### Option 1: Create Personal Recipe
+1. Sign in with Google
+2. Click "Create Personal Recipe"
+3. Fill in the details and optionally upload a photo
+4. Click "Save Recipe"
+
+#### Option 2: Import from URL
+1. Sign in with Google
+2. Click "Import from Web"
+3. Paste a recipe URL (works with AllRecipes, Epicurious, and many others)
+4. Click "Import Recipe"
+
+#### Option 3: Bookmarklet (for protected sites)
+For sites with bot protection (Food Network, America's Test Kitchen):
+1. Visit [pams-recipes.web.app/bookmarklet.html](https://pams-recipes.web.app/bookmarklet.html)
+2. Follow the instructions to add the bookmarklet to your browser
+3. Navigate to any recipe page and click the bookmarklet to save it
+
+### Project Structure
+
+```
+firebase/
+├── public/           # Frontend files
+│   ├── index.html    # Main app
+│   ├── styles.css    # Styling
+│   ├── app.js        # Application logic
+│   ├── save.html     # Bookmarklet save handler
+│   └── bookmarklet.html  # Bookmarklet instructions
+├── firestore.rules   # Database security rules
+├── storage.rules     # File storage security rules
+└── firebase.json     # Firebase configuration
+```
+
+### Deployment
+
+```bash
+cd firebase
+firebase deploy --only hosting
+```
+
+To update security rules:
+```bash
+firebase deploy --only firestore:rules,storage
+```
+
+---
+
+# II. Food Network Recipe Scraper
+
+A Python tool to backup your saved recipes from Food Network. Uses browser automation for reliable scraping and exports to JSON and Markdown formats.
 
 ## Features
 
 - 🍳 Scrape individual recipes by URL
-- 📚 Batch scrape from a list of URLs
-- 🗂️ Scrape entire collection/gallery pages
-- 💾 Save your favorited recipes (requires login cookies)
+- 💾 Scrape all your saved/favorited recipes
 - 📄 Export to both JSON and Markdown formats
-- 🎨 Beautiful CLI with progress indicators
+- 🔐 Browser-based login (no manual cookie handling)
 
 ## Installation
 
 ```bash
-# Create a virtual environment (recommended)
+# Create a virtual environment
 python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Install Playwright browsers
+playwright install chromium
 ```
 
 ## Quick Start
 
-### Scrape a Single Recipe
+### 1. Log In (First Time Setup)
 
 ```bash
-python cli.py scrape "https://www.foodnetwork.com/recipes/ina-garten/perfect-roast-chicken-recipe-1940592"
+python browser_scraper.py login
 ```
 
-### Scrape Multiple Recipes
+This opens a browser window. Log into your Food Network account, then close the browser. Your session is saved automatically to `.browser_state/`.
 
-Create a file `my_recipes.txt` with one URL per line:
-
-```
-https://www.foodnetwork.com/recipes/ina-garten/perfect-roast-chicken-recipe-1940592
-https://www.foodnetwork.com/recipes/alton-brown/good-eats-meatloaf-recipe-1937673
-https://www.foodnetwork.com/recipes/food-network-kitchen/pancakes-recipe-1913844
-```
-
-Then run:
+### 2. Scrape Your Saved Recipes
 
 ```bash
-python cli.py scrape-list my_recipes.txt
+python browser_scraper.py scrape-saved
 ```
 
-### Scrape a Collection Page
+### 3. Add Individual Recipes
 
 ```bash
-python cli.py scrape-collection "https://www.foodnetwork.com/recipes/photos/our-best-chicken-recipes"
+python scrape_url.py "https://www.foodnetwork.com/recipes/ina-garten/perfect-roast-chicken-recipe-1940592"
 ```
 
-### Scrape Your Saved Recipes
-
-This requires exporting your authentication cookies (see below):
+Or multiple at once:
 
 ```bash
-python cli.py scrape-saved --cookies cookies.json
+python scrape_url.py url1 url2 url3
 ```
 
 ## Output Structure
 
-Recipes are saved to the `output/` directory (customizable with `--output`):
-
 ```
 output/
-├── all_recipes.json      # Combined JSON with all recipes
-├── json/
-│   ├── perfect-roast-chicken.json
-│   └── ...
-└── markdown/
+├── all_recipes_final.json    # All recipes in JSON format
+└── markdown_final/
     ├── perfect-roast-chicken.md
+    ├── meatloaf.md
     └── ...
-```
-
-## Exporting Browser Cookies
-
-To access your saved/favorited recipes, you need to export cookies from your browser while logged into Food Network.
-
-### Method 1: Cookie-Editor Extension (Recommended)
-
-1. Install the [Cookie-Editor](https://cookie-editor.cgagnier.ca/) extension for your browser
-2. Log into [foodnetwork.com](https://www.foodnetwork.com)
-3. Click the Cookie-Editor extension icon
-4. Click **Export** → **Export as JSON**
-5. Save to a file named `cookies.json`
-6. Convert to the simple format (see below)
-
-### Method 2: EditThisCookie Extension
-
-1. Install [EditThisCookie](https://www.editthiscookie.com/) for Chrome
-2. Log into Food Network
-3. Click the extension icon and click Export
-4. Save to a file and convert to simple format
-
-### Cookie Format
-
-The scraper expects a simple JSON object format:
-
-```json
-{
-    "cookie_name_1": "cookie_value_1",
-    "cookie_name_2": "cookie_value_2"
-}
-```
-
-If your extension exports an array format, you can convert it with this Python snippet:
-
-```python
-import json
-
-# Load exported cookies (array format from extension)
-with open('exported_cookies.json') as f:
-    cookies_array = json.load(f)
-
-# Convert to simple dict format
-cookies_dict = {c['name']: c['value'] for c in cookies_array}
-
-# Save in the format the scraper expects
-with open('cookies.json', 'w') as f:
-    json.dump(cookies_dict, f, indent=2)
-```
-
-Or run the built-in helper:
-
-```bash
-python cli.py cookie-help
 ```
 
 ## Command Reference
 
+### `login` - Authenticate
+
+```bash
+python browser_scraper.py login
+```
+
+Opens a browser for you to log in. Session is saved for future use.
+
+### `scrape-saved` - All Saved Recipes
+
+```bash
+python browser_scraper.py scrape-saved [options]
+
+Options:
+  --output, -o DIR      Output directory (default: output)
+  --visible            Show browser window while scraping
+  --limit, -l NUMBER   Maximum recipes to scrape
+```
+
 ### `scrape` - Single Recipe
 
 ```bash
-python cli.py scrape URL [options]
+python browser_scraper.py scrape "URL" [options]
 
 Options:
   --output, -o DIR     Output directory (default: output)
-  --cookies, -c FILE   Cookies JSON file for authentication
-  --delay, -d SECONDS  Delay between requests (default: 1.0)
+  --visible           Show browser window
 ```
 
-### `scrape-list` - Multiple URLs
+### `scrape_url.py` - Quick Add
+
+The simplest way to add new recipes to your collection:
 
 ```bash
-python cli.py scrape-list FILE [options]
-
-Options:
-  --output, -o DIR     Output directory (default: output)
-  --cookies, -c FILE   Cookies JSON file
-  --delay, -d SECONDS  Delay between requests (default: 1.0)
+python scrape_url.py "URL"
 ```
 
-### `scrape-collection` - Collection Page
-
-```bash
-python cli.py scrape-collection URL [options]
-
-Options:
-  --output, -o DIR     Output directory (default: output)
-  --cookies, -c FILE   Cookies JSON file
-  --limit, -l NUMBER   Maximum recipes to scrape
-  --delay, -d SECONDS  Delay between requests (default: 1.0)
-```
-
-### `scrape-saved` - Your Saved Recipes
-
-```bash
-python cli.py scrape-saved --cookies FILE [options]
-
-Options:
-  --cookies, -c FILE   Cookies JSON file (required)
-  --output, -o DIR     Output directory (default: output)
-  --limit, -l NUMBER   Maximum recipes to scrape
-  --delay, -d SECONDS  Delay between requests (default: 1.5)
-```
+This automatically:
+- Scrapes the recipe
+- Adds it to `all_recipes_final.json`
+- Creates a markdown file in `markdown_final/`
 
 ## Example Markdown Output
 
 ```markdown
 # Perfect Roast Chicken
 
-**Author:** Ina Garten
+**By:** Ina Garten
 
-> Crispy skin, juicy meat, and simple preparation make this the perfect roast chicken.
+> Crispy skin, juicy meat, and simple preparation.
 
-**Prep Time:** 15m | **Cook Time:** 1h 30m | **Servings:** 4
+**Prep:** 15 min | **Cook:** 1 hr 30 min | **Servings:** 4
 
 ## Ingredients
 
@@ -196,46 +211,37 @@ Options:
 - 1 large bunch fresh thyme
 - 1 lemon, halved
 - 1 head garlic, cut in half crosswise
-- 2 tablespoons butter, melted
 
 ## Instructions
 
 1. Preheat the oven to 425 degrees F.
-2. Remove the chicken giblets. Rinse the chicken inside and out...
-...
+2. Remove the chicken giblets...
 ```
 
-## Tips
+## Re-authenticating
 
-- **Rate Limiting**: The default delay of 1 second between requests is respectful to the server. Increase it if you're scraping many recipes.
-- **Cookies Expire**: If saved recipe scraping stops working, re-export your cookies.
-- **Large Collections**: Use `--limit` to test with a few recipes first.
+If your session expires:
 
-## Troubleshooting
+```bash
+python browser_scraper.py login
+```
 
-### "No saved recipes found"
+Log in again and close the browser. Your new session replaces the old one.
 
-- Make sure you're logged into Food Network in your browser
-- Re-export your cookies (they may have expired)
-- Check that the cookie format is correct
+## Current Collection
 
-### "Failed to scrape recipe"
-
-- The recipe page structure may have changed
-- Some recipes may be behind a paywall
-- Try increasing the delay with `--delay 2`
-
-### Missing ingredients or instructions
-
-- Food Network occasionally changes their HTML structure
-- The scraper uses JSON-LD structured data when available (most reliable)
-- Open an issue if you find consistent problems with specific recipes
+| Status | Count | Notes |
+|--------|-------|-------|
+| ✅ Complete | 305 | Ingredients + instructions |
+| ✅ Narrative | 2 | Ingredients embedded in instructions |
+| ⚠️ Mashed format | 1 | All ingredients in one string |
+| ⚠️ Ingredients only | 2 | No instructions available |
+| **Total** | **310** | |
 
 ## License
 
-MIT License - Use at your own risk. This tool is for personal backup purposes only.
+MIT License - For personal backup purposes only.
 
 ## Disclaimer
 
-This tool is for personal use to backup recipes you have access to. Please respect Food Network's terms of service and don't use this for commercial purposes or to redistribute copyrighted content.
-
+This tool is for personal use to backup recipes you have access to. Please respect Food Network's terms of service.

@@ -19,11 +19,10 @@ env/
 output/*
 !output/all_recipes_final.json
 
-# Sensitive files - DO NOT COMMIT
-cookies.json
-*cookies*.json
-*.cookies
+# temp dev files and notes
 .browser_state/
+firebase/service-account-key.json
+cursor*.md
 
 # OS
 .DS_Store
@@ -32,4 +31,5 @@ Thumbs.db
 # Logs
 *.log
 
-firebase/service-account-key.json
+
+

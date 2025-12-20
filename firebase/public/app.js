@@ -491,6 +491,7 @@ function createRecipeCard(recipe, index) {
 
 function openRecipeModal(recipe) {
     modalContent.innerHTML = createRecipeDetail(recipe);
+    modalContent.scrollTop = 0; // Reset scroll position to top
     modalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
 

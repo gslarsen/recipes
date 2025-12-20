@@ -520,10 +520,13 @@ async function toggleCookMode(enabled) {
         try {
             wakeLock = await navigator.wakeLock.request('screen');
             console.log('Cook Mode: Screen wake lock acquired');
-            
-            // Re-acquire wake lock if page becomes visible again
+
+            // When wake lock is released (e.g., switching apps), update the toggle
             wakeLock.addEventListener('release', () => {
                 console.log('Cook Mode: Screen wake lock released');
+                wakeLock = null;
+                const toggle = document.getElementById('cookModeToggle');
+                if (toggle) toggle.checked = false;
             });
         } catch (err) {
             console.error('Cook Mode failed:', err);
@@ -541,9 +544,6 @@ function releaseCookMode() {
         wakeLock.release();
         wakeLock = null;
     }
-    // Reset toggle state
-    const toggle = document.getElementById('cookModeToggle');
-    if (toggle) toggle.checked = false;
 }
 
 async function confirmDeleteRecipe(recipe) {

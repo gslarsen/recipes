@@ -1007,14 +1007,37 @@ async function saveRecipeToBoards() {
         closeBoardModal();
         showToast('Recipe saved to boards!', 'success');
 
-        // Refresh the recipe modal if it's still open
-        if (modalOverlay.classList.contains('active')) {
-            // Update the recipe in our local state
-            const recipeIndex = allRecipes.findIndex(r => r.id === recipeId);
-            if (recipeIndex > -1) {
-                allRecipes[recipeIndex].boards = boardsToSave;
+        // Update the recipe in our local state
+        const recipeIndex = allRecipes.findIndex(r => r.id === recipeId);
+        if (recipeIndex > -1) {
+            allRecipes[recipeIndex].boards = boardsToSave;
+        }
+
+        // If we're viewing a specific board, check if recipe was removed from it
+        if (currentBoardFilter) {
+            const wasRemovedFromCurrentBoard = !boardsToSave.includes(currentBoardFilter);
+
+            if (wasRemovedFromCurrentBoard) {
+                // Close the recipe modal since recipe no longer belongs in this view
+                closeModal();
+
+                // Re-filter and re-render the board view
+                filteredRecipes = allRecipes.filter(r => r.boards && r.boards.includes(currentBoardFilter));
+
+                // Update the header count
+                const boardViewCount = document.querySelector('.board-view-count');
+                if (boardViewCount) {
+                    boardViewCount.textContent = `${filteredRecipes.length} ${filteredRecipes.length === 1 ? 'recipe' : 'recipes'}`;
+                }
+
+                renderRecipes();
+            } else if (modalOverlay.classList.contains('active') && recipeIndex > -1) {
+                // Refresh the recipe modal if it's still open
                 openRecipeModal(allRecipes[recipeIndex]);
             }
+        } else if (modalOverlay.classList.contains('active') && recipeIndex > -1) {
+            // Not in board filter view, just refresh the recipe modal
+            openRecipeModal(allRecipes[recipeIndex]);
         }
 
     } catch (error) {

@@ -559,6 +559,25 @@ function renderBoards() {
         boardCounts[board.id] = allRecipes.filter(r => r.boards && r.boards.includes(board.name)).length;
     });
 
+    // Sort boards based on current sort selection
+    const sortValue = sortSelect.value;
+    const sortedBoards = [...allBoards].sort((a, b) => {
+        switch (sortValue) {
+            case 'az':
+                return a.name.localeCompare(b.name);
+            case 'za':
+                return b.name.localeCompare(a.name);
+            case 'author': // For boards, sort by recipe count (most first)
+                return (boardCounts[b.id] || 0) - (boardCounts[a.id] || 0);
+            case 'newest':
+            default:
+                // Sort by createdAt descending (newest first)
+                const aTime = a.createdAt?.toMillis?.() || 0;
+                const bTime = b.createdAt?.toMillis?.() || 0;
+                return bTime - aTime;
+        }
+    });
+
     let boardsHtml = '';
 
     // Add "Create New Board" card first (only for authorized users)
@@ -576,8 +595,8 @@ function renderBoards() {
         `;
     }
 
-    // Add existing boards
-    allBoards.forEach(board => {
+    // Add existing boards (sorted)
+    sortedBoards.forEach(board => {
         const count = boardCounts[board.id] || 0;
         const coverImage = board.coverImage;
         const showEditBtn = currentUser && isAuthorizedUser(currentUser);
@@ -1394,7 +1413,12 @@ function handleSearch() {
 
 function handleSort() {
     applyCurrentSort();
-    renderRecipes();
+    // Re-render based on current view
+    if (boardsTab.classList.contains('active') && !currentBoardFilter) {
+        renderBoards();
+    } else {
+        renderRecipes();
+    }
 }
 
 function applyCurrentSort() {

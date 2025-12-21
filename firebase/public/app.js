@@ -546,7 +546,9 @@ function switchView(view) {
         filteredRecipes = [...allRecipes];
         applyCurrentSort();
         renderRecipes();
-        document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${filteredRecipes.length}</span> recipes`;
+        const unassignedCount = allRecipes.filter(r => !r.boards || r.boards.length === 0).length;
+        const unassignedText = unassignedCount > 0 ? ` <span class="unassigned-count">(${unassignedCount} not on a Board)</span>` : '';
+        document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${filteredRecipes.length}</span> recipes${unassignedText}`;
     }
 }
 
@@ -623,7 +625,7 @@ function openCreateBoardPrompt() {
     boardNameInput.value = '';
     boardNameModalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
-    
+
     setTimeout(() => boardNameInput.focus(), 100);
 }
 
@@ -735,7 +737,7 @@ function renameBoard(boardId, currentName) {
     // Close dropdown menu
     const menu = document.querySelector('.board-dropdown-menu');
     if (menu) menu.remove();
-    
+
     // Store info and open modal in rename mode
     boardNameMode = 'rename';
     renamingBoardId = boardId;
@@ -745,7 +747,7 @@ function renameBoard(boardId, currentName) {
     boardNameInput.value = currentName;
     boardNameModalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
-    
+
     // Focus and select the input
     setTimeout(() => {
         boardNameInput.focus();
@@ -763,19 +765,19 @@ function closeBoardNameModal() {
 
 async function confirmBoardNameAction() {
     const name = boardNameInput.value.trim();
-    
+
     if (!name) {
         closeBoardNameModal();
         return;
     }
-    
+
     if (boardNameMode === 'create') {
         // Check if name already exists
         if (allBoards.some(b => b.name.toLowerCase() === name.toLowerCase())) {
             showToast('A board with this name already exists.', 'warning');
             return;
         }
-        
+
         closeBoardNameModal();
         await createBoard(name);
     } else {
@@ -784,19 +786,19 @@ async function confirmBoardNameAction() {
             closeBoardNameModal();
             return;
         }
-        
+
         // Check if name already exists
         if (allBoards.some(b => b.name.toLowerCase() === name.toLowerCase() && b.id !== renamingBoardId)) {
             showToast('A board with this name already exists.', 'warning');
             return;
         }
-        
+
         try {
             // Update board name
             await db.collection('boards').doc(renamingBoardId).update({
                 name: name
             });
-            
+
             // Update all recipes that have this board
             const recipesWithBoard = allRecipes.filter(r => r.boards && r.boards.includes(renamingBoardOldName));
             for (const recipe of recipesWithBoard) {
@@ -805,7 +807,7 @@ async function confirmBoardNameAction() {
                     boards: updatedBoards
                 });
             }
-            
+
             closeBoardNameModal();
             showToast('Board renamed successfully!', 'success');
         } catch (error) {
@@ -1007,7 +1009,14 @@ async function saveRecipeToBoards() {
 // ============================================
 
 function renderRecipes() {
-    recipeCount.textContent = filteredRecipes.length;
+    // Update count display (only show unassigned count on All Recipes view, not when filtering by board)
+    if (!currentBoardFilter && !boardsTab.classList.contains('active')) {
+        const unassignedCount = allRecipes.filter(r => !r.boards || r.boards.length === 0).length;
+        const unassignedText = unassignedCount > 0 ? ` <span class="unassigned-count">(${unassignedCount} not on a Board)</span>` : '';
+        document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${filteredRecipes.length}</span> recipes${unassignedText}`;
+    } else if (currentBoardFilter) {
+        document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${filteredRecipes.length}</span> recipes in board`;
+    }
 
     if (filteredRecipes.length === 0) {
         recipeGrid.innerHTML = `
@@ -1557,17 +1566,16 @@ function getPlaceholderSVGRaw() {
     return `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" x2="18" y1="17" y2="17"/></svg>`;
 }
 
-// Get image URL - convert local_image_path to Cloud Storage URL
+// Get image URL - prioritize Firebase Storage, fallback to external URL
 function getImageUrl(recipe) {
-    // If it's already a full URL (http/https), use it directly
-    if (recipe.image_url && recipe.image_url.startsWith('http')) {
-        return recipe.image_url;
-    }
-    // If we have a local_image_path, construct the Cloud Storage URL
+    // Prioritize local_image_path (Firebase Storage) for reliability
     if (recipe.local_image_path) {
         return `https://storage.googleapis.com/pams-recipes.firebasestorage.app/${recipe.local_image_path}`;
     }
-    // Fallback to image_url if it exists
-    return recipe.image_url || null;
+    // Fallback to external URL if no local image
+    if (recipe.image_url) {
+        return recipe.image_url;
+    }
+    return null;
 }
 

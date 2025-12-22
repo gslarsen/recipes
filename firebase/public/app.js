@@ -528,10 +528,6 @@ function switchView(view) {
     currentView = view;
     currentBoardFilter = null;
 
-    // Clear search input and update placeholder
-    searchInput.value = '';
-    searchInput.placeholder = view === 'boards' ? 'Search boards...' : 'Search recipes...';
-
     // Update tabs
     recipesTab.classList.toggle('active', view === 'recipes');
     boardsTab.classList.toggle('active', view === 'boards');
@@ -546,12 +542,26 @@ function switchView(view) {
 
     // Update count label
     if (view === 'boards') {
+        // Clear search when switching to My Boards
+        searchInput.value = '';
         filteredBoards = [...allBoards];
         applyCurrentSort();
         renderBoards();
         document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${filteredBoards.length}</span> boards`;
     } else {
-        filteredRecipes = [...allRecipes];
+        // Keep search when switching to All Recipes, apply filter if exists
+        const query = searchInput.value.toLowerCase().trim();
+        if (query) {
+            filteredRecipes = allRecipes.filter(recipe => {
+                const titleMatch = recipe.title?.toLowerCase().includes(query);
+                const authorMatch = recipe.author?.toLowerCase().includes(query);
+                const descMatch = recipe.description?.toLowerCase().includes(query);
+                const ingredientMatch = recipe.ingredients?.some(ing => ing.toLowerCase().includes(query));
+                return titleMatch || authorMatch || descMatch || ingredientMatch;
+            });
+        } else {
+            filteredRecipes = [...allRecipes];
+        }
         applyCurrentSort();
         renderRecipes();
         const unassignedCount = allRecipes.filter(r => !r.boards || r.boards.length === 0).length;
@@ -588,9 +598,8 @@ function renderBoards() {
 
     let boardsHtml = '';
 
-    // Add "Create New Board" card first (only for authorized users, and only if not searching)
-    const isSearching = searchInput.value.trim().length > 0;
-    if (currentUser && isAuthorizedUser(currentUser) && !isSearching) {
+    // Add "Create New Board" card first (only for authorized users)
+    if (currentUser && isAuthorizedUser(currentUser)) {
         boardsHtml += `
             <div class="board-card create-board" onclick="openCreateBoardPrompt()">
                 <div class="create-board-content">
@@ -678,9 +687,8 @@ function openBoard(boardId) {
     currentBoardFilter = board.name;
     currentView = 'recipes';
 
-    // Clear search and update placeholder for recipe search within board
+    // Clear search when opening a board
     searchInput.value = '';
-    searchInput.placeholder = 'Search recipes...';
 
     // Update tabs
     recipesTab.classList.remove('active');
@@ -1524,40 +1532,47 @@ function createRecipeDetail(recipe) {
 function handleSearch() {
     const query = searchInput.value.toLowerCase().trim();
 
-    // Check if we're on the boards view (not viewing a specific board's recipes)
-    if (boardsTab.classList.contains('active') && !currentBoardFilter) {
-        // Search boards
-        if (!query) {
-            filteredBoards = [...allBoards];
-        } else {
-            filteredBoards = allBoards.filter(board => {
-                return board.name?.toLowerCase().includes(query);
-            });
-        }
-        applyCurrentSort();
-        renderBoards();
-        document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${filteredBoards.length}</span> boards`;
+    // If on "My Boards" tab and user starts typing, switch to "All Recipes"
+    if (boardsTab.classList.contains('active') && !currentBoardFilter && query) {
+        // Switch to All Recipes view without clearing the search
+        currentView = 'recipes';
+        currentBoardFilter = null;
+        recipesTab.classList.add('active');
+        boardsTab.classList.remove('active');
+        recipeGrid.style.display = 'grid';
+        boardsView.style.display = 'none';
+        const existingHeader = document.querySelector('.board-view-header');
+        if (existingHeader) existingHeader.remove();
+    }
+
+    // Search recipes
+    if (!query) {
+        filteredRecipes = [...allRecipes];
     } else {
-        // Search recipes
-        if (!query) {
-            filteredRecipes = [...allRecipes];
-        } else {
-            filteredRecipes = allRecipes.filter(recipe => {
-                const titleMatch = recipe.title?.toLowerCase().includes(query);
-                const authorMatch = recipe.author?.toLowerCase().includes(query);
-                const descMatch = recipe.description?.toLowerCase().includes(query);
-                const ingredientMatch = recipe.ingredients?.some(ing => ing.toLowerCase().includes(query));
-                return titleMatch || authorMatch || descMatch || ingredientMatch;
-            });
-        }
+        filteredRecipes = allRecipes.filter(recipe => {
+            const titleMatch = recipe.title?.toLowerCase().includes(query);
+            const authorMatch = recipe.author?.toLowerCase().includes(query);
+            const descMatch = recipe.description?.toLowerCase().includes(query);
+            const ingredientMatch = recipe.ingredients?.some(ing => ing.toLowerCase().includes(query));
+            return titleMatch || authorMatch || descMatch || ingredientMatch;
+        });
+    }
 
-        // If viewing a specific board, also filter by board
-        if (currentBoardFilter) {
-            filteredRecipes = filteredRecipes.filter(r => r.boards && r.boards.includes(currentBoardFilter));
-        }
+    // If viewing a specific board, also filter by board
+    if (currentBoardFilter) {
+        filteredRecipes = filteredRecipes.filter(r => r.boards && r.boards.includes(currentBoardFilter));
+    }
 
-        applyCurrentSort();
-        renderRecipes();
+    applyCurrentSort();
+    renderRecipes();
+
+    // Update count display
+    const unassignedCount = allRecipes.filter(r => !r.boards || r.boards.length === 0).length;
+    const unassignedText = !currentBoardFilter && unassignedCount > 0 ? ` <span class="unassigned-count">(${unassignedCount} not on a Board)</span>` : '';
+    if (currentBoardFilter) {
+        document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${filteredRecipes.length}</span> recipes in board`;
+    } else {
+        document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${filteredRecipes.length}</span> recipes${unassignedText}`;
     }
 }
 

@@ -95,8 +95,8 @@ async function updateRecipeImage() {
     };
     const contentType = contentTypes[ext] || 'image/jpeg';
 
-    // Upload to Firebase Storage
-    const destinationPath = `recipe-images/${imageFilename}`;
+    // Upload to Firebase Storage (use 'images/' to match existing structure)
+    const destinationPath = `images/${imageFilename}`;
     console.log(`\n📤 Uploading image to Firebase Storage...`);
 
     await bucket.upload(imagePath, {

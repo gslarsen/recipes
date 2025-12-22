@@ -44,7 +44,8 @@
       </div>
       <div class="add-recipe-buttons" id="addRecipeButtons" style="display: none;">
         <button class="add-button" id="importFromWebBtn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
             <path d="M2 12h20"></path>
@@ -52,7 +53,8 @@
           Import from Web
         </button>
         <button class="add-button" id="createRecipeBtn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 5v14"></path>
             <path d="M5 12h14"></path>
           </svg>
@@ -66,7 +68,8 @@
     <!-- View Tabs -->
     <div class="view-tabs">
       <button class="view-tab active" data-view="recipes" id="recipesTab">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect width="7" height="7" x="3" y="3" rx="1"></rect>
           <rect width="7" height="7" x="14" y="3" rx="1"></rect>
           <rect width="7" height="7" x="14" y="14" rx="1"></rect>
@@ -75,7 +78,8 @@
         All Recipes
       </button>
       <button class="view-tab" data-view="boards" id="boardsTab">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
         </svg>
         My Boards
@@ -123,8 +127,10 @@
       </button>
       <div class="import-modal-content">
         <h2 class="modal-title">Import from Web</h2>
-        <p class="modal-description">Paste a recipe URL from any website. We'll automatically extract the recipe details.</p>
-        <p class="modal-tip">💡 For Food Network and other protected sites, use our <a href="/bookmarklet.html" target="_blank">bookmarklet</a> instead!</p>
+        <p class="modal-description">Paste a recipe URL from any website. We'll automatically extract the recipe
+          details.</p>
+        <p class="modal-tip">💡 For Food Network and other protected sites, use our <a href="/bookmarklet.html"
+            target="_blank">bookmarklet</a> instead!</p>
         <form id="importForm">
           <div class="form-group">
             <label for="recipeUrl">Recipe URL</label>
@@ -135,7 +141,8 @@
             <button type="submit" class="btn-primary" id="submitImport">
               <span class="btn-text">Import Recipe</span>
               <span class="btn-loading" style="display: none;">
-                <svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
                   <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path>
                 </svg>
@@ -191,7 +198,8 @@
         <div class="new-board-row">
           <input type="text" id="newBoardName" placeholder="New board name..." class="new-board-input">
           <button type="button" class="btn-create-board" id="createBoardBtn">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 5v14"></path>
               <path d="M5 12h14"></path>
             </svg>
@@ -230,7 +238,8 @@
           <div class="photo-upload-area" id="photoUploadArea">
             <input type="file" id="recipePhoto" accept="image/*" hidden>
             <div class="photo-placeholder" id="photoPlaceholder">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.5">
                 <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
                 <circle cx="9" cy="9" r="2"></circle>
                 <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
@@ -286,7 +295,8 @@
             <button type="submit" class="btn-primary" id="submitCreate">
               <span class="btn-text">Save Recipe</span>
               <span class="btn-loading" style="display: none;">
-                <svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
                   <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path>
                 </svg>
@@ -308,7 +318,8 @@
     <div class="modal confirm-modal">
       <div class="confirm-modal-content">
         <div class="confirm-modal-icon" id="confirmModalIcon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 6h18"></path>
             <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
             <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
@@ -337,4 +348,3 @@
 </body>
 
 </html>
-

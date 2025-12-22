@@ -720,7 +720,7 @@ body {
 }
 
 .card-image {
-    aspect-ratio: 4/3;
+    aspect-ratio: 1/1;
     overflow: hidden;
     background: var(--bg-accent);
     position: relative;

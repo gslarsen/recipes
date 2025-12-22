@@ -18,6 +18,7 @@ env/
 # Output
 output/*
 !output/all_recipes_final.json
+!output/recipes_with_notes.json
 
 # temp dev files and notes
 .browser_state/

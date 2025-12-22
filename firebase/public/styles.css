@@ -1097,6 +1097,129 @@ body {
     margin-top: var(--space-xs);
 }
 
+/* My Private Notes */
+.notes-section {
+    margin-top: var(--space-2xl);
+    padding-top: var(--space-xl);
+    border-top: 1px solid var(--border-light);
+}
+
+.notes-content {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 1px solid #f59e0b;
+    border-left: 4px solid #f59e0b;
+    border-radius: 8px;
+    padding: var(--space-lg);
+    margin-bottom: var(--space-md);
+}
+
+.notes-text {
+    color: #92400e;
+    line-height: 1.6;
+    font-size: 0.95rem;
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.notes-empty {
+    color: #b45309;
+    font-style: italic;
+    margin: 0;
+}
+
+.notes-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.notes-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid #f59e0b;
+    border-radius: 6px;
+    color: #b45309;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.notes-edit-btn:hover {
+    background: #fef3c7;
+    border-color: #d97706;
+    color: #92400e;
+}
+
+.notes-editor {
+    margin-top: var(--space-md);
+}
+
+.notes-editor textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: var(--space-md);
+    border: 2px solid #f59e0b;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    resize: vertical;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+.notes-editor textarea:focus {
+    outline: none;
+    border-color: #d97706;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
+
+.notes-editor textarea::placeholder {
+    color: #d97706;
+}
+
+.notes-editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+}
+
+.notes-cancel-btn {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--border-medium);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.notes-cancel-btn:hover {
+    background: var(--bg-accent);
+    border-color: var(--border-dark);
+}
+
+.notes-save-btn {
+    padding: 8px 16px;
+    background: #f59e0b;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.notes-save-btn:hover {
+    background: #d97706;
+}
+
 /* Source link */
 .recipe-source {
     margin-top: var(--space-xl);
@@ -1627,6 +1750,37 @@ body {
         font-size: 0.7rem !important;
         display: inline !important;
         margin-left: 0.25rem !important;
+    }
+
+    /* Notes section print styles */
+    .notes-section {
+        margin-top: 1rem !important;
+        padding-top: 0.5rem !important;
+        border-top: 1px solid #ccc !important;
+        page-break-inside: avoid;
+    }
+
+    .notes-content {
+        background: #fffbeb !important;
+        border: 1px solid #f59e0b !important;
+        border-left: 3px solid #f59e0b !important;
+        padding: 0.5rem !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .notes-text {
+        color: #92400e !important;
+        font-size: 0.85rem !important;
+    }
+
+    .notes-empty {
+        display: none !important;
+    }
+
+    .notes-actions,
+    .notes-editor {
+        display: none !important;
     }
 }
 

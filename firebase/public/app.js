@@ -1145,6 +1145,34 @@ function openRecipeModal(recipe) {
     if (addToBoardBtn) {
         addToBoardBtn.addEventListener('click', () => openBoardModal(recipe));
     }
+
+    // Attach notes handlers if buttons exist
+    const notesEditBtn = modalContent.querySelector('#notesEditBtn');
+    const notesCancelBtn = modalContent.querySelector('#notesCancelBtn');
+    const notesSaveBtn = modalContent.querySelector('#notesSaveBtn');
+
+    if (notesEditBtn) {
+        notesEditBtn.addEventListener('click', () => {
+            document.getElementById('notesContent').style.display = 'none';
+            document.querySelector('.notes-actions').style.display = 'none';
+            document.getElementById('notesEditor').style.display = 'block';
+            document.getElementById('notesTextarea').focus();
+        });
+    }
+
+    if (notesCancelBtn) {
+        notesCancelBtn.addEventListener('click', () => {
+            document.getElementById('notesEditor').style.display = 'none';
+            document.getElementById('notesContent').style.display = 'block';
+            document.querySelector('.notes-actions').style.display = 'flex';
+            // Reset textarea to original value
+            document.getElementById('notesTextarea').value = recipe.notes || '';
+        });
+    }
+
+    if (notesSaveBtn) {
+        notesSaveBtn.addEventListener('click', () => saveNotes(recipe));
+    }
 }
 
 function closeModal() {
@@ -1152,6 +1180,42 @@ function closeModal() {
     document.body.style.overflow = '';
     // Release wake lock when closing modal
     releaseCookMode();
+}
+
+async function saveNotes(recipe) {
+    const textarea = document.getElementById('notesTextarea');
+    const newNotes = textarea.value.trim();
+
+    try {
+        await db.collection('recipes').doc(recipe.id).update({
+            notes: newNotes
+        });
+
+        // Update local state
+        const recipeIndex = allRecipes.findIndex(r => r.id === recipe.id);
+        if (recipeIndex > -1) {
+            allRecipes[recipeIndex].notes = newNotes;
+        }
+        recipe.notes = newNotes;
+
+        // Update the display
+        const notesContent = document.getElementById('notesContent');
+        if (newNotes) {
+            notesContent.innerHTML = `<p class="notes-text">${escapeHtml(newNotes).replace(/\n/g, '<br>')}</p>`;
+        } else {
+            notesContent.innerHTML = `<p class="notes-empty">No notes yet. Click Edit to add your own notes.</p>`;
+        }
+
+        // Hide editor, show content
+        document.getElementById('notesEditor').style.display = 'none';
+        notesContent.style.display = 'block';
+        document.querySelector('.notes-actions').style.display = 'flex';
+
+        showToast('Notes saved!', 'success');
+    } catch (error) {
+        console.error('Error saving notes:', error);
+        showToast('Failed to save notes: ' + error.message, 'error');
+    }
 }
 
 // Cook Mode - Screen Wake Lock
@@ -1404,6 +1468,35 @@ function createRecipeDetail(recipe) {
                 </div>
 
                 ${nutritionHtml}
+
+                <section class="notes-section">
+                    <h3 class="section-title">My Private Notes</h3>
+                    <div class="notes-content" id="notesContent">
+                        ${recipe.notes
+                            ? `<p class="notes-text">${escapeHtml(recipe.notes).replace(/\n/g, '<br>')}</p>`
+                            : `<p class="notes-empty">No notes yet. Click Edit to add your own notes.</p>`
+                        }
+                    </div>
+                    ${currentUser && isAuthorizedUser(currentUser) ? `
+                    <div class="notes-actions">
+                        <button class="notes-edit-btn" id="notesEditBtn" data-recipe-id="${recipe.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+                                <path d="m15 5 4 4"></path>
+                            </svg>
+                            Edit
+                        </button>
+                    </div>
+                    <div class="notes-editor" id="notesEditor" style="display: none;">
+                        <textarea id="notesTextarea" placeholder="Add your private notes here...">${escapeHtml(recipe.notes || '')}</textarea>
+                        <div class="notes-editor-actions">
+                            <button class="notes-cancel-btn" id="notesCancelBtn">Cancel</button>
+                            <button class="notes-save-btn" id="notesSaveBtn" data-recipe-id="${recipe.id}">Save Notes</button>
+                        </div>
+                    </div>
+                    ` : ''}
+                </section>
+
                 ${sourceHtml}
                 ${deleteButtonHtml}
             </div>

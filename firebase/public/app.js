@@ -6,11 +6,12 @@
 // State
 let allRecipes = [];
 let filteredRecipes = [];
+let allBoards = [];
+let filteredBoards = [];
 let currentUser = null;
 let unsubscribeRecipes = null;
 let unsubscribeBoards = null;
 let wakeLock = null;
-let allBoards = [];
 let currentView = 'recipes'; // 'recipes' or 'boards'
 let currentBoardFilter = null; // null means show all recipes
 let currentRecipeForBoard = null; // Recipe being added to board
@@ -513,8 +514,10 @@ function loadBoards() {
             snapshot.forEach((doc) => {
                 allBoards.push({ id: doc.id, ...doc.data() });
             });
-            if (currentView === 'boards') {
+            filteredBoards = [...allBoards];
+            if (currentView === 'boards' && !currentBoardFilter) {
                 renderBoards();
+                document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${filteredBoards.length}</span> boards`;
             }
         }, (error) => {
             console.error('Error loading boards:', error);
@@ -524,6 +527,10 @@ function loadBoards() {
 function switchView(view) {
     currentView = view;
     currentBoardFilter = null;
+
+    // Clear search input and update placeholder
+    searchInput.value = '';
+    searchInput.placeholder = view === 'boards' ? 'Search boards...' : 'Search recipes...';
 
     // Update tabs
     recipesTab.classList.toggle('active', view === 'recipes');
@@ -539,9 +546,10 @@ function switchView(view) {
 
     // Update count label
     if (view === 'boards') {
+        filteredBoards = [...allBoards];
+        applyCurrentSort();
         renderBoards();
-        recipeCount.textContent = allBoards.length;
-        document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${allBoards.length}</span> boards`;
+        document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${filteredBoards.length}</span> boards`;
     } else {
         filteredRecipes = [...allRecipes];
         applyCurrentSort();
@@ -553,15 +561,15 @@ function switchView(view) {
 }
 
 function renderBoards() {
-    // Calculate recipe counts for each board
+    // Calculate recipe counts for each board (use allBoards for counts)
     const boardCounts = {};
     allBoards.forEach(board => {
         boardCounts[board.id] = allRecipes.filter(r => r.boards && r.boards.includes(board.name)).length;
     });
 
-    // Sort boards based on current sort selection
+    // Sort filtered boards based on current sort selection
     const sortValue = sortSelect.value;
-    const sortedBoards = [...allBoards].sort((a, b) => {
+    const sortedBoards = [...filteredBoards].sort((a, b) => {
         switch (sortValue) {
             case 'az':
                 return a.name.localeCompare(b.name);
@@ -580,8 +588,9 @@ function renderBoards() {
 
     let boardsHtml = '';
 
-    // Add "Create New Board" card first (only for authorized users)
-    if (currentUser && isAuthorizedUser(currentUser)) {
+    // Add "Create New Board" card first (only for authorized users, and only if not searching)
+    const isSearching = searchInput.value.trim().length > 0;
+    if (currentUser && isAuthorizedUser(currentUser) && !isSearching) {
         boardsHtml += `
             <div class="board-card create-board" onclick="openCreateBoardPrompt()">
                 <div class="create-board-content">
@@ -626,7 +635,7 @@ function renderBoards() {
         `;
     });
 
-    if (allBoards.length === 0 && (!currentUser || !isAuthorizedUser(currentUser))) {
+    if (filteredBoards.length === 0 && (!currentUser || !isAuthorizedUser(currentUser))) {
         boardsHtml = `
             <div class="loading" style="grid-column: 1 / -1;">
                 <p>No boards yet.</p>
@@ -668,6 +677,10 @@ function openBoard(boardId) {
 
     currentBoardFilter = board.name;
     currentView = 'recipes';
+
+    // Clear search and update placeholder for recipe search within board
+    searchInput.value = '';
+    searchInput.placeholder = 'Search recipes...';
 
     // Update tabs
     recipesTab.classList.remove('active');
@@ -1511,20 +1524,41 @@ function createRecipeDetail(recipe) {
 function handleSearch() {
     const query = searchInput.value.toLowerCase().trim();
 
-    if (!query) {
-        filteredRecipes = [...allRecipes];
+    // Check if we're on the boards view (not viewing a specific board's recipes)
+    if (boardsTab.classList.contains('active') && !currentBoardFilter) {
+        // Search boards
+        if (!query) {
+            filteredBoards = [...allBoards];
+        } else {
+            filteredBoards = allBoards.filter(board => {
+                return board.name?.toLowerCase().includes(query);
+            });
+        }
+        applyCurrentSort();
+        renderBoards();
+        document.querySelector('.recipe-count').innerHTML = `<span id="recipeCount">${filteredBoards.length}</span> boards`;
     } else {
-        filteredRecipes = allRecipes.filter(recipe => {
-            const titleMatch = recipe.title?.toLowerCase().includes(query);
-            const authorMatch = recipe.author?.toLowerCase().includes(query);
-            const descMatch = recipe.description?.toLowerCase().includes(query);
-            const ingredientMatch = recipe.ingredients?.some(ing => ing.toLowerCase().includes(query));
-            return titleMatch || authorMatch || descMatch || ingredientMatch;
-        });
-    }
+        // Search recipes
+        if (!query) {
+            filteredRecipes = [...allRecipes];
+        } else {
+            filteredRecipes = allRecipes.filter(recipe => {
+                const titleMatch = recipe.title?.toLowerCase().includes(query);
+                const authorMatch = recipe.author?.toLowerCase().includes(query);
+                const descMatch = recipe.description?.toLowerCase().includes(query);
+                const ingredientMatch = recipe.ingredients?.some(ing => ing.toLowerCase().includes(query));
+                return titleMatch || authorMatch || descMatch || ingredientMatch;
+            });
+        }
 
-    applyCurrentSort();
-    renderRecipes();
+        // If viewing a specific board, also filter by board
+        if (currentBoardFilter) {
+            filteredRecipes = filteredRecipes.filter(r => r.boards && r.boards.includes(currentBoardFilter));
+        }
+
+        applyCurrentSort();
+        renderRecipes();
+    }
 }
 
 function handleSort() {
